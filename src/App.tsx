@@ -4,15 +4,21 @@ import { AccessibilityToolbar } from './components/AccessibilityToolbar';
 import { GuidedWorkflow } from './components/guided-workflow/GuidedWorkflow';
 import { FindingsList } from './components/findings/FindingsList';
 import { inspectFormElement } from './modules/form-inspector';
+import { evaluateSecurity } from './modules/security-guard';
+import { detectFormValidationErrors } from './modules/rescue-loop';
+import { SecurityGuardBanner } from './components/security/SecurityGuardBanner';
+import { RescueLoopCard } from './components/rescue-loop/RescueLoopCard';
 import { fillFields, highlightField, clearHighlight } from './content';
 import { FormInspectionReport, TransferResult } from './types';
 import { useAccessibility } from './modules/accessibility-controls/AccessibilityProvider';
-import { Search, ArrowRight } from 'lucide-react';
+import { Search, ArrowRight, CheckCircle2 } from 'lucide-react';
+
+type AppTab = 'harness' | 'rescue' | 'audit';
 
 export const App: React.FC = () => {
   const { announce } = useAccessibility();
 
-  const [activeTab, setActiveView] = useState<'harness' | 'audit'>('harness');
+  const [activeTab, setActiveView] = useState<AppTab>('harness');
   const [report, setReport] = useState<FormInspectionReport | null>(null);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [formSubmittedData, setFormSubmittedData] = useState<Record<string, any> | null>(null);
@@ -27,6 +33,8 @@ export const App: React.FC = () => {
       const formEl = document.getElementById('embedded-demo-form');
       if (formEl) {
         const result = inspectFormElement(formEl, window.location.href);
+        result.securityReport = evaluateSecurity(window.location.href, formEl);
+        result.rescueReport = detectFormValidationErrors(formEl, result.fields);
         setReport(result);
         announce(
           `Scan complete. Found ${result.fields.length} fields and ${result.findings.length} accessibility issues.`
@@ -46,6 +54,14 @@ export const App: React.FC = () => {
     e.preventDefault();
     const form = document.getElementById('embedded-demo-form') as HTMLFormElement;
     if (form) {
+      if (report) {
+        const rescue = detectFormValidationErrors(form, report.fields);
+        if (rescue.hasErrors) {
+          setReport({ ...report, rescueReport: rescue });
+          announce('Form submission failed validation. Rescue Loop activated.');
+          return;
+        }
+      }
       const formData = new FormData(form);
       const data = Object.fromEntries(formData.entries());
       setFormSubmittedData(data);
@@ -69,7 +85,7 @@ export const App: React.FC = () => {
         </div>
       </section>
 
-      {/* Two views over the same scan */}
+      {/* Views over the same scan */}
       <nav className="km-tabs" aria-label="Workbench views">
         <button
           type="button"
@@ -81,14 +97,41 @@ export const App: React.FC = () => {
         </button>
 
         {report && (
-          <button
-            type="button"
-            className={`km-tab${activeTab === 'audit' ? ' km-tab--on' : ''}`}
-            aria-current={activeTab === 'audit' ? 'page' : undefined}
-            onClick={() => setActiveView('audit')}
-          >
-            Inspection findings ({report.findings.length})
-          </button>
+          <>
+
+            <button
+              type="button"
+              className={`km-tab${activeTab === 'rescue' ? ' km-tab--on' : ''}`}
+              aria-current={activeTab === 'rescue' ? 'page' : undefined}
+              onClick={() => { setActiveView('rescue'); runRescueDetection(); }}
+            >
+              Rescue Loop
+              {report.rescueReport?.hasErrors ? (
+                <span
+                  style={{
+                    marginLeft: '0.35rem',
+                    backgroundColor: 'var(--km-error)',
+                    color: '#FFFFFF',
+                    borderRadius: '10px',
+                    padding: '1px 6px',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {report.rescueReport.totalErrors}
+                </span>
+              ) : null}
+            </button>
+
+            <button
+              type="button"
+              className={`km-tab${activeTab === 'audit' ? ' km-tab--on' : ''}`}
+              aria-current={activeTab === 'audit' ? 'page' : undefined}
+              onClick={() => setActiveView('audit')}
+            >
+              Inspection findings ({report.findings.length})
+            </button>
+          </>
         )}
 
         <span className="km-tabs__end" style={{ display: 'flex', gap: '0.9rem', padding: '0.45rem 0' }}>
@@ -104,7 +147,7 @@ export const App: React.FC = () => {
         </span>
       </nav>
 
-      <main className="km-workbench" style={activeTab === 'audit' ? { display: 'block' } : undefined}>
+      <main className="km-workbench" style={activeTab !== 'harness' ? { display: 'block' } : undefined}>
         {activeTab === 'harness' && (
           <>
             {/* Left — the fixture page as a person would meet it */}
@@ -248,6 +291,12 @@ export const App: React.FC = () => {
 
             {/* Right — the guided layer */}
             <section className="km-panel km-panel--flush" aria-label="Vazhika Guided Mode">
+              {report && report.securityReport && (
+                <div style={{ padding: '0.85rem 1.15rem 0' }}>
+                  <SecurityGuardBanner report={report.securityReport} compact />
+                </div>
+              )}
+
               {!report ? (
                 <div className="km-state">
                   <h2 className="km-state__title">Nothing scanned yet</h2>
@@ -273,6 +322,41 @@ export const App: React.FC = () => {
               )}
             </section>
           </>
+        )}
+
+
+
+        {/* Rescue Loop */}
+        {activeTab === 'rescue' && report && (
+          <div style={{ maxWidth: '860px', margin: '0 auto', width: '100%', padding: '1.25rem 0' }}>
+            {report.rescueReport?.hasErrors ? (
+              <RescueLoopCard
+                rescueReport={report.rescueReport}
+                onFixFieldInGuided={() => {
+                  setActiveView('harness');
+                }}
+                onRetryTransfer={() => {
+                  handleTransferToEmbeddedForm({});
+                }}
+              />
+            ) : (
+              <div style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+                <div style={{ color: 'var(--km-success)', marginBottom: '0.75rem', display: 'flex', justifyContent: 'center' }}>
+                  <CheckCircle2 size={42} />
+                </div>
+                <h3 className="km-title">No Validation Errors Detected</h3>
+                <p className="km-sub" style={{ marginTop: '0.45rem', maxWidth: '440px', marginInline: 'auto' }}>
+                  The embedded form inputs currently pass standard validation. Try clearing a required field and clicking 'Submit Application' to trigger the Rescue Loop.
+                </p>
+              </div>
+            )}
+            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
+              <button type="button" className="km-btn km-btn--primary" onClick={() => setActiveView('harness')}>
+                <span>Back to the workbench</span>
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Audit */}

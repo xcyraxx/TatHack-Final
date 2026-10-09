@@ -198,4 +198,69 @@ export const sampleInaccessibleReport: FormInspectionReport = {
     },
   ],
   unsupportedFields: [],
+  securityReport: {
+    domain: 'services.kerala.gov.in',
+    isHttps: true,
+    isOfficialGovDomain: true,
+    isKnownBankDomain: false,
+    riskLevel: 'safe',
+    trustScore: 98,
+    summary: {
+      en: 'Verified Safe: Official and encrypted civic portal (.gov.in).',
+      ml: 'സുരക്ഷിതം: പരിശോധിച്ചുറപ്പിച്ച ഔദ്യോഗിക സർക്കാർ പോർട്ടൽ (.gov.in).',
+    },
+    factors: [
+      {
+        id: 'SEC-OFFICIAL-GOV',
+        level: 'safe',
+        title: {
+          en: 'Official Government Domain (.gov.in)',
+          ml: 'ഔദ്യോഗിക സർക്കാർ വെബ്സൈറ്റ് (.gov.in)',
+        },
+        description: {
+          en: 'This portal is hosted on verified Kerala Government e-Governance infrastructure.',
+          ml: 'ഇത് കേരള സർക്കാരിന്റെ ഔദ്യോഗിക ഇ-ഗവേണൻസ് വെബ്സൈറ്റാണ്.',
+        },
+      },
+      {
+        id: 'SEC-HTTPS-OK',
+        level: 'safe',
+        title: {
+          en: 'Secure Encryption (HTTPS)',
+          ml: 'സുരക്ഷിത എൻക്രിപ്ഷൻ (HTTPS)',
+        },
+        description: {
+          en: 'All data entered is encrypted in transit using valid TLS certificates.',
+          ml: 'വിവരങ്ങൾ സുരക്ഷിതമായി എൻക്രിപ്റ്റ് ചെയ്തിരിക്കുന്നു.',
+        },
+      },
+    ],
+    blockedSensitiveFields: [],
+    hasSuspiciousFormAction: false,
+    hasHiddenCaptureFields: false,
+    evaluatedAt: new Date().toISOString(),
+  },
+  rescueReport: {
+    hasErrors: true,
+    totalErrors: 1,
+    detectedAt: new Date().toISOString(),
+    issues: [
+      {
+        fieldId: 'phone',
+        fieldName: 'phone',
+        label: 'Mobile Number',
+        selector: '#phone',
+        rawError: 'Please match the requested format: 10 digit mobile number without +91.',
+        friendlyExplanation: {
+          en: 'The website requires a 10-digit mobile number without country code (+91), spaces, or dashes.',
+          ml: 'മൊബൈൽ നമ്പറിൽ +91 അല്ലെങ്കിൽ സ്പേസുകൾ ഇല്ലാതെ കൃത്യമായി 10 അക്കങ്ങൾ ഉണ്ടായിരിക്കണം.',
+        },
+        currentValue: '+91 98470 12345',
+        suggestedFix: {
+          en: 'Remove "+91 " and spaces so only 10 digits remain (e.g. 9847012345).',
+          ml: '+91 ഒഴിവാക്കി 10 അക്കങ്ങൾ മാത്രം നൽകുക (ഉദാ: 9847012345).',
+        },
+      },
+    ],
+  },
 };

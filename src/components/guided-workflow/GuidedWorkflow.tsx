@@ -9,6 +9,7 @@ import { useAccessibility } from '../../modules/accessibility-controls/Accessibi
 import { speechService } from '../../modules/speech-service';
 import { VazhikaMark } from '../VazhikaMark';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
+import { normalizeDateToYMD } from '../../modules/date-formatter';
 
 interface Props {
   report: FormInspectionReport;
@@ -16,6 +17,7 @@ interface Props {
   onClearHighlight?: () => void;
   onTransferAnswers: (answers: Record<string, any>) => Promise<TransferResult>;
   onExit?: () => void;
+  initialFieldId?: string;
 }
 
 export const GuidedWorkflow: React.FC<Props> = ({
@@ -24,16 +26,23 @@ export const GuidedWorkflow: React.FC<Props> = ({
   onClearHighlight,
   onTransferAnswers,
   onExit,
+  initialFieldId,
 }) => {
   const { fields, formId, formTitle } = report;
   const { language, voiceEnabled, announce } = useAccessibility();
 
-  const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(() => {
+    if (initialFieldId) {
+      const idx = fields.findIndex((f) => f.id === initialFieldId);
+      if (idx !== -1) return idx;
+    }
+    return 0;
+  });
   const [answers, setAnswers] = useState<Record<string, any>>(() => {
     const initial: Record<string, any> = {};
     fields.forEach((f) => {
       if (f.currentValue !== undefined && f.currentValue !== '') {
-        initial[f.id] = f.currentValue;
+        initial[f.id] = f.type === 'date' ? normalizeDateToYMD(f.currentValue) || f.currentValue : f.currentValue;
       }
     });
     return initial;
@@ -46,18 +55,35 @@ export const GuidedWorkflow: React.FC<Props> = ({
   const [isListening, setIsListening] = useState<boolean>(false);
   const [lastSavedTime, setLastSavedTime] = useState<string>('just now');
 
+  // Jump to field if initialFieldId changes
+  useEffect(() => {
+    if (initialFieldId) {
+      const idx = fields.findIndex((f) => f.id === initialFieldId);
+      if (idx !== -1) {
+        setCurrentStepIndex(idx);
+        setIsReviewMode(false);
+      }
+    }
+  }, [initialFieldId, fields]);
+
   // Load draft on mount
   useEffect(() => {
     loadDraft(formId).then((draft) => {
       if (draft && draft.answers) {
-        setAnswers((prev) => ({ ...prev, ...draft.answers }));
-        if (typeof draft.currentStepIndex === 'number' && draft.currentStepIndex < fields.length) {
+        const sanitized: Record<string, any> = { ...draft.answers };
+        fields.forEach((f) => {
+          if (f.type === 'date' && sanitized[f.id]) {
+            sanitized[f.id] = normalizeDateToYMD(sanitized[f.id]) || sanitized[f.id];
+          }
+        });
+        setAnswers((prev) => ({ ...prev, ...sanitized }));
+        if (!initialFieldId && typeof draft.currentStepIndex === 'number' && draft.currentStepIndex < fields.length) {
           setCurrentStepIndex(draft.currentStepIndex);
         }
         announce('Draft restored from previous session.');
       }
     });
-  }, [formId]);
+  }, [formId, initialFieldId, fields]);
 
   // Save draft whenever answers or step change
   useEffect(() => {

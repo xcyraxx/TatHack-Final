@@ -4,6 +4,7 @@ import { useAccessibility } from '../../modules/accessibility-controls/Accessibi
 import { Volume2, VolumeX, Pencil, ArrowRight, ArrowLeft } from 'lucide-react';
 import { speechService } from '../../modules/speech-service';
 import { CopyButton } from '../CopyNotification';
+import { formatDateToDMY } from '../../modules/date-formatter';
 
 interface Props {
   fields: FieldDefinition[];
@@ -76,6 +77,9 @@ export const ReviewScreen: React.FC<Props> = ({
         : language === 'ml'
         ? 'അംഗീകരിച്ചിട്ടില്ല'
         : 'Not agreed';
+    }
+    if (field.type === 'date' && val) {
+      return formatDateToDMY(String(val));
     }
     if (field.type === 'radio' || field.type === 'select') {
       const opt = field.options?.find((o) => o.value === String(val));

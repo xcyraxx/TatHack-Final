@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { FieldDefinition } from '../../types';
 import { ValidationError } from '../../modules/validation-engine';
 import { useAccessibility } from '../../modules/accessibility-controls/AccessibilityProvider';
-import { Mic, MicOff, AlertCircle, Volume2 } from 'lucide-react';
+import { Mic, MicOff, AlertCircle, Volume2, HelpCircle } from 'lucide-react';
 import { speechService } from '../../modules/speech-service';
+import { normalizeDateToYMD } from '../../modules/date-formatter';
 
 interface Props {
   field: FieldDefinition;
@@ -31,6 +32,16 @@ export const FieldRenderer: React.FC<Props> = ({
       inputRef.current.focus();
     }
   }, [field.id]);
+
+  // Ensure date values conform to HTML5 yyyy-MM-dd format to avoid browser console warnings
+  useEffect(() => {
+    if (field.type === 'date' && value && typeof value === 'string') {
+      const normalized = normalizeDateToYMD(value);
+      if (normalized && normalized !== value) {
+        onChange(normalized);
+      }
+    }
+  }, [field.type, value, onChange]);
 
   const explanationText = language === 'ml' ? field.explanation.ml : field.explanation.en;
 
@@ -115,7 +126,6 @@ export const FieldRenderer: React.FC<Props> = ({
         {explanationText}
       </p>
 
-      {/* Control */}
       <div className="km-control-area">
         {(field.type === 'text' ||
           field.type === 'email' ||
@@ -128,8 +138,15 @@ export const FieldRenderer: React.FC<Props> = ({
               id={field.id}
               className="km-control"
               type={field.type}
-              value={value ?? ''}
-              onChange={(e) => onChange(e.target.value)}
+              value={field.type === 'date' ? normalizeDateToYMD(value) : (value ?? '')}
+              onChange={(e) => {
+                const rawVal = e.target.value;
+                if (field.type === 'date') {
+                  onChange(normalizeDateToYMD(rawVal) || rawVal);
+                } else {
+                  onChange(rawVal);
+                }
+              }}
               placeholder={field.placeholder || ''}
               aria-labelledby={`label-${field.id}`}
               aria-describedby={describedBy}

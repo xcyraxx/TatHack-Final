@@ -15,10 +15,15 @@ class SpeechService {
   private synth: SpeechSynthesis | null = null;
   private recognition: any = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private voices: SpeechSynthesisVoice[] = [];
 
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
+      this.loadVoices();
+      if (this.synth.onvoiceschanged !== undefined) {
+        this.synth.onvoiceschanged = () => this.loadVoices();
+      }
     }
 
     if (typeof window !== 'undefined') {
@@ -32,6 +37,12 @@ class SpeechService {
           this.recognition = null;
         }
       }
+    }
+  }
+
+  private loadVoices() {
+    if (this.synth) {
+      this.voices = this.synth.getVoices();
     }
   }
 
@@ -62,12 +73,11 @@ class SpeechService {
     utterance.pitch = 1.0;
 
     // Pick best available voice if possible
-    const voices = this.synth.getVoices();
     if (lang === 'ml') {
-      const mlVoice = voices.find((v) => v.lang.startsWith('ml'));
+      const mlVoice = this.voices.find((v) => v.lang.startsWith('ml'));
       if (mlVoice) utterance.voice = mlVoice;
     } else {
-      const enVoice = voices.find((v) => v.lang.startsWith('en-IN') || v.lang.startsWith('en-GB') || v.lang.startsWith('en'));
+      const enVoice = this.voices.find((v) => v.lang.startsWith('en-IN') || v.lang.startsWith('en-GB') || v.lang.startsWith('en'));
       if (enVoice) utterance.voice = enVoice;
     }
 
@@ -82,6 +92,9 @@ class SpeechService {
     };
 
     this.currentUtterance = utterance;
+    
+    // Quick workaround for Chrome bug where long speech gets cancelled silently:
+    // https://stackoverflow.com/questions/21947730/chrome-speech-synthesis-with-longer-texts
     this.synth.speak(utterance);
     return true;
   }

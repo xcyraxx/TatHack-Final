@@ -1,0 +1,1 @@
+sed -i 's/announce(\`Voice input error: ${err}\`);/announce(\`Voice input error: ${err}\`);\n          speechService.speak(language === "ml" ? "ക്ഷമിക്കണം, ഈ വിൻഡോയിൽ ശബ്ദം തിരിച്ചറിയാൻ കഴിയില്ല." : "Sorry, voice dictation is blocked in this window. Please type.", language);/g' src/components/guided-workflow/FieldRenderer.tsx

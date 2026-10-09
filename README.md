@@ -4,6 +4,8 @@
 **Track 5: Accessibility & Inclusion**  
 An accessibility-first Chrome browser extension (Manifest V3) that inspects difficult online forms on live websites and transforms them into guided, plain-language, one-question-at-a-time workflows.
 
+📄 **[View Full Project Description & Features Specification](PROJECT_DESCRIPTION.md)**
+
 ---
 
 ## 🏛️ What is Vazhika?
@@ -12,10 +14,13 @@ Complex government and public-service forms present high barriers for people wit
 
 **Vazhika** operates directly on any live webpage. When activated on a confusing form, it:
 1. **Scans the live DOM**: Detects missing labels, unassociated error containers, visual asterisks missing programmatic `required` attributes, unsemantic inputs, and ambiguous buttons.
-2. **Translates to Plain Language**: Contextual explanations in both **English and Malayalam (മലയാളം)** for confusing terms like *"Correspondence Address"*.
-3. **Presents Guided Mode**: One question at a time with large touch targets, keyboard navigation, high contrast, text scaling, and text-to-speech.
-4. **Safely Transfers Answers**: Dispatches framework-aware events directly into the original website controls upon explicit user confirmation.
-5. **Never Submits Automatically**: Leaves final submission control firmly in the user's hands.
+2. **Scam & Phishing Guard**: Evaluates `.gov.in`/`.nic.in` domain authenticity, flags typosquatting and impersonation, detects dangerous credential prompts (UPI PIN, CVV, Net Banking passwords), and checks HTTPS encryption with plain English & Malayalam trust badges.
+3. **Translates to Plain Language**: Contextual explanations in both **English and Malayalam (മലയാളം)** for confusing terms like *"Correspondence Address"*.
+4. **02 — Explain This Field**: Instant contextual help on any question without taking over the whole form—delivers concrete examples, format rules, verified DOM requirements, and honest fallbacks.
+5. **01 — Vazhika Rescue Loop**: When native forms reject submissions (`:invalid`, `validity.valueMissing`, `patternMismatch`, `aria-invalid`), intercepts the errors, translates technical validation rejections into plain-language bilingual steps, and lets citizens repair errors directly.
+6. **Presents Guided Mode**: One question at a time with large touch targets, keyboard navigation, high contrast, text scaling, and text-to-speech.
+7. **Safely Transfers Answers**: Dispatches framework-aware events directly into the original website controls upon explicit user confirmation.
+8. **Never Submits Automatically**: Leaves final submission control firmly in the user's hands.
 
 ---
 
@@ -98,6 +103,9 @@ npm test
 ```
 
 ### Verified Test Suites:
+- `src/test/security-guard.test.ts`: Verifies official `.gov.in`/`.nic.in` domain checking, bank domain recognition, typosquatting & impersonation flags, HTTPS enforcement, and prohibited credential prompts (UPI PIN, CVV).
+- `src/test/rescue-loop.test.ts`: Verifies detection of `:invalid`, `aria-invalid`, and inline error DOM containers; tests empathetic plain-language bilingual error guidance and suggested fix generation.
+- `src/test/field-explainer.test.ts`: Verifies contextual question meaning, concrete examples, format rules, DOM requirements, and honest fallback for unconfirmed field purposes.
 - `src/test/form-inspector.test.ts`: Detects missing labels, unassociated errors, asterisk-only required fields, radio groups without fieldset/legend, ambiguous button labels.
 - `src/test/validation-engine.test.ts`: Enforces original required rules, 10-digit telephone validation, email regex, date checks, checkbox declarations.
 - `src/test/plain-language.test.ts`: Verifies English and Malayalam translations for confusing administrative terms.

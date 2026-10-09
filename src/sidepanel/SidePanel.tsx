@@ -6,7 +6,11 @@ import { FindingsList } from '../components/findings/FindingsList';
 import { FormInspectionReport, TransferResult } from '../types';
 import { useAccessibility } from '../modules/accessibility-controls/AccessibilityProvider';
 import { clearDraft } from '../modules/draft-storage';
-import { RefreshCw, ExternalLink, ArrowRight } from 'lucide-react';
+import { RefreshCw, ExternalLink, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { SecurityGuardBanner } from '../components/security/SecurityGuardBanner';
+import { RescueLoopCard } from '../components/rescue-loop/RescueLoopCard';
+
+type SidePanelView = 'guided' | 'rescue' | 'audit';
 
 export const SidePanel: React.FC = () => {
   const { language, announce } = useAccessibility();
@@ -14,7 +18,8 @@ export const SidePanel: React.FC = () => {
   const [activeTabId, setActiveTabId] = useState<number | null>(null);
   const [report, setReport] = useState<FormInspectionReport | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [activeView, setActiveView] = useState<'guided' | 'audit'>('guided');
+  const [activeView, setActiveView] = useState<SidePanelView>('guided');
+  const [jumpToFieldId, setJumpToFieldId] = useState<string | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const scanActiveTab = () => {
@@ -97,6 +102,23 @@ export const SidePanel: React.FC = () => {
     }
   };
 
+  const runRescueDetection = () => {
+    if (activeTabId && typeof chrome !== "undefined" && chrome.tabs) {
+      setIsLoading(true);
+      chrome.tabs.sendMessage(activeTabId, { type: "VAZHIKA_DETECT_RESCUE" }, (response) => {
+        setIsLoading(false);
+        if (response?.rescue && report) {
+          setReport({ ...report, rescueReport: response.rescue });
+        }
+      });
+    } else {
+      // Demo mode refresh
+      if (report) {
+        setReport({ ...report });
+      }
+    }
+  };
+
   const handleClearHighlight = () => {
     if (activeTabId && typeof chrome !== 'undefined' && chrome.tabs) {
       chrome.tabs.sendMessage(activeTabId, { type: 'VAZHIKA_CLEAR_HIGHLIGHT' });
@@ -149,7 +171,7 @@ export const SidePanel: React.FC = () => {
       <BrandHeader badge="Guided Mode" />
       <AccessibilityToolbar onClearDraft={handleClearDraft} />
 
-      {/* Two views over the same scan */}
+      {/* Views navigation over the scanned page */}
       {report && !isLoading && (
         <nav className="km-tabs" role="navigation" aria-label={language === 'ml' ? 'കാഴ്ചകൾ' : 'Views'}>
           <button
@@ -158,7 +180,31 @@ export const SidePanel: React.FC = () => {
             aria-current={activeView === 'guided' ? 'page' : undefined}
             onClick={() => setActiveView('guided')}
           >
-            {language === 'ml' ? 'ഗൈഡഡ് മോഡ്' : 'Guided Completion'}
+            {language === 'ml' ? 'ഗൈഡഡ് മോഡ്' : 'Guided'}
+          </button>
+
+          <button
+            type="button"
+            className={`km-tab${activeView === 'rescue' ? ' km-tab--on' : ''}`}
+            aria-current={activeView === 'rescue' ? 'page' : undefined}
+            onClick={() => { setActiveView('rescue'); runRescueDetection(); }}
+          >
+            {language === 'ml' ? 'റെസ്ക്യൂ ലൂപ്പ്' : 'Rescue Loop'}
+            {report.rescueReport?.hasErrors ? (
+              <span
+                style={{
+                  marginLeft: '0.35rem',
+                  backgroundColor: 'var(--km-error)',
+                  color: '#FFFFFF',
+                  borderRadius: '10px',
+                  padding: '1px 6px',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                }}
+              >
+                {report.rescueReport.totalErrors}
+              </span>
+            ) : null}
           </button>
 
           <button
@@ -167,7 +213,7 @@ export const SidePanel: React.FC = () => {
             aria-current={activeView === 'audit' ? 'page' : undefined}
             onClick={() => setActiveView('audit')}
           >
-            {language === 'ml' ? 'ഓഡിറ്റ്' : 'Accessibility Audit'} ({report.findings.length})
+            {language === 'ml' ? 'ഓഡിറ്റ്' : 'Audit'} ({report.findings.length})
           </button>
 
           <span className="km-tabs__end">
@@ -185,6 +231,13 @@ export const SidePanel: React.FC = () => {
       )}
 
       <main style={{ flex: 1 }}>
+        {/* Security / Phishing Guard Banner */}
+        {report && !isLoading && report.securityReport && (
+          <div style={{ padding: '0.85rem 1.25rem 0', maxWidth: '860px' }}>
+            <SecurityGuardBanner report={report.securityReport} />
+          </div>
+        )}
+
         {/* Scanning */}
         {isLoading && (
           <div style={{ padding: '3rem 1.5rem', textAlign: 'center' }} role="status">
@@ -213,11 +266,52 @@ export const SidePanel: React.FC = () => {
         {report && !isLoading && activeView === 'guided' && (
           <GuidedWorkflow
             report={report}
+            initialFieldId={jumpToFieldId}
             onHighlightField={handleHighlightField}
             onClearHighlight={handleClearHighlight}
             onTransferAnswers={handleTransferAnswers}
             onExit={scanActiveTab}
           />
+        )}
+
+        {/* Rescue Loop */}
+        {report && !isLoading && activeView === 'rescue' && (
+          <div style={{ padding: '1.25rem 1.5rem', maxWidth: '860px' }}>
+            {report.rescueReport?.hasErrors ? (
+              <RescueLoopCard
+                rescueReport={report.rescueReport}
+                onFixFieldInGuided={(fieldId) => {
+                  setJumpToFieldId(fieldId);
+                  setActiveView('guided');
+                }}
+                onRetryTransfer={() => setActiveView('guided')}
+              />
+            ) : (
+              <div style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
+                <div style={{ color: 'var(--km-success)', marginBottom: '0.75rem', display: 'flex', justifyContent: 'center' }}>
+                  <CheckCircle2 size={40} />
+                </div>
+                <h3 className="km-title" style={{ fontSize: '1.25rem' }}>
+                  {language === 'ml' ? 'പിശകുകൾ ഒന്നും കണ്ടെത്തിയില്ല' : 'No Validation Errors Detected'}
+                </h3>
+                <p className="km-sub" style={{ marginTop: '0.45rem', maxWidth: '440px', marginInline: 'auto' }}>
+                  {language === 'ml'
+                    ? 'ഈ ഫോമിൽ തടസ്സപ്പെടുത്തുന്ന ഇൻപുട്ട് പിശകുകളോ അസാധുവായ ഫീൽഡുകളോ കണ്ടെത്തിയിട്ടില്ല. ഫോം സുഗമമായി പൂരിപ്പിക്കാം.'
+                    : 'No submission rejections or invalid fields found on this page. If the site rejects your form later, rescan to activate Rescue Loop.'}
+                </p>
+                <div style={{ marginTop: '1.25rem' }}>
+                  <button
+                    type="button"
+                    className="km-btn km-btn--primary"
+                    onClick={() => setActiveView('guided')}
+                  >
+                    <span>{language === 'ml' ? 'ഗൈഡഡ് മോഡിലേക്ക് തുടരുക' : 'Continue to Guided Completion'}</span>
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Audit — evidence for everything found on this page */}

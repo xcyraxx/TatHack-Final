@@ -4,7 +4,8 @@ import { AccessibilityToolbar } from '../components/AccessibilityToolbar';
 import { FindingsList } from '../components/findings/FindingsList';
 import { FormInspectionReport } from '../types';
 import { useAccessibility } from '../modules/accessibility-controls/AccessibilityProvider';
-import { AlertTriangle, ScanLine, ArrowRight } from 'lucide-react';
+import { AlertTriangle, ScanLine, ArrowRight, RotateCcw } from 'lucide-react';
+import { SecurityGuardBanner } from '../components/security/SecurityGuardBanner';
 
 interface ScanError {
   title: string;
@@ -204,6 +205,33 @@ export const Popup: React.FC = () => {
         {/* Evidence-based result */}
         {report && !isScanning && (
           <div className="km-popup__section">
+            {report.securityReport && (
+              <SecurityGuardBanner report={report.securityReport} compact />
+            )}
+
+            {report.rescueReport?.hasErrors && (
+              <div
+                className="km-notice km-notice--warning"
+                style={{ marginBottom: '0.85rem', cursor: 'pointer' }}
+                onClick={handleOpenGuidedMode}
+                role="alert"
+              >
+                <RotateCcw size={16} aria-hidden="true" style={{ color: 'var(--km-warning)', flexShrink: 0 }} />
+                <div>
+                  <strong className="km-notice__title">
+                    {language === 'ml'
+                      ? `റെസ്ക്യൂ ലൂപ്പ്: ${report.rescueReport.totalErrors} തെറ്റുകൾ കണ്ടെത്തി`
+                      : `Rescue Loop: ${report.rescueReport.totalErrors} submission errors`}
+                  </strong>
+                  <p style={{ margin: '0.2rem 0 0', fontSize: 'var(--km-fs-meta)', lineHeight: 1.35 }}>
+                    {language === 'ml'
+                      ? 'സൈറ്റ് നിരസിച്ച കോളങ്ങൾ എളുപ്പത്തിൽ തിരുത്താൻ ഗൈഡഡ് മോഡ് തുറക്കുക.'
+                      : 'Open Guided Mode to review and repair rejected fields.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="km-summary-line">
               <span>
                 <strong>{report.totalControlsFound}</strong>{' '}

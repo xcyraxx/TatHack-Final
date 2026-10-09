@@ -1,4 +1,5 @@
 import { FieldDefinition } from '../../types';
+import { normalizeDateToYMD } from '../date-formatter';
 
 export interface ValidationError {
   fieldId: string;
@@ -90,19 +91,22 @@ export function validateFieldValue(
   }
 
   if (field.type === 'date') {
-    const parsedDate = new Date(strValue);
-    if (isNaN(parsedDate.getTime())) {
+    const ymd = normalizeDateToYMD(strValue);
+    const parsedDate = ymd ? new Date(ymd) : new Date(strValue);
+    if (!ymd && isNaN(parsedDate.getTime())) {
       return {
         fieldId: field.id,
         message: {
-          en: 'Please choose or enter a valid date in YYYY-MM-DD format.',
+          en: 'Please choose or enter a valid date in YYYY-MM-DD or DD-MM-YYYY format.',
           ml: 'ദയവായി ശരിയായ തീയതി തിരഞ്ഞെടുക്കുക.',
         },
       };
     }
     // Check if future date for birth
     if (field.id.includes('dob') || field.name.includes('dob') || field.id.includes('birth')) {
-      if (parsedDate > new Date()) {
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (parsedDate > today) {
         return {
           fieldId: field.id,
           message: {

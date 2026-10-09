@@ -78,6 +78,8 @@ export interface FormInspectionReport {
   }[];
   inspectedAt: string;
   isCompliant: boolean;
+  securityReport?: SecurityReport;
+  rescueReport?: RescueReport;
 }
 
 export interface FormDraftState {
@@ -103,6 +105,74 @@ export interface TransferResult {
   notice: string;
 }
 
+/* --------------------------------------------------------------------------
+   Scam & Phishing Guard Types
+   -------------------------------------------------------------------------- */
+export type SecurityRiskLevel = 'safe' | 'warning' | 'danger';
+
+export interface SecurityRiskFactor {
+  id: string;
+  level: SecurityRiskLevel;
+  title: {
+    en: string;
+    ml: string;
+  };
+  description: {
+    en: string;
+    ml: string;
+  };
+  recommendation?: {
+    en: string;
+    ml: string;
+  };
+}
+
+export interface SecurityReport {
+  domain: string;
+  isHttps: boolean;
+  isOfficialGovDomain: boolean;
+  isKnownBankDomain: boolean;
+  riskLevel: SecurityRiskLevel;
+  trustScore: number; // 0 - 100
+  summary: {
+    en: string;
+    ml: string;
+  };
+  factors: SecurityRiskFactor[];
+  blockedSensitiveFields: string[]; // e.g., ['UPI PIN', 'Card CVV']
+  hasSuspiciousFormAction: boolean;
+  hasHiddenCaptureFields: boolean;
+  evaluatedAt: string;
+}
+
+/* --------------------------------------------------------------------------
+   Rescue Loop (Failed Submission Recovery) Types
+   -------------------------------------------------------------------------- */
+export interface RescueIssue {
+  fieldId: string;
+  fieldName: string;
+  label: string;
+  selector: string;
+  rawError: string;
+  friendlyExplanation: {
+    en: string;
+    ml: string;
+  };
+  currentValue: any;
+  suggestedFix?: {
+    en: string;
+    ml: string;
+  };
+}
+
+export interface RescueReport {
+  hasErrors: boolean;
+  issues: RescueIssue[];
+  totalErrors: number;
+  detectedAt: string;
+}
+
+
 /* Extension Messaging Protocol */
 export type ExtensionMessage =
   | { type: 'VAZHIKA_PING' }
@@ -113,4 +183,6 @@ export type ExtensionMessage =
   | { type: 'VAZHIKA_CLEAR_HIGHLIGHT' }
   | { type: 'VAZHIKA_FILL_FIELDS'; answers: Record<string, any> }
   | { type: 'VAZHIKA_FILL_RESULT'; result: TransferResult }
+  | { type: 'VAZHIKA_DETECT_RESCUE' }
+  | { type: 'VAZHIKA_RESCUE_RESULT'; rescue: RescueReport }
   | { type: 'VAZHIKA_OPEN_SIDEPANEL'; tabId?: number };

@@ -1,4 +1,7 @@
 import { inspectFormElement, isDataField } from '../modules/form-inspector';
+import { evaluateSecurity } from '../modules/security-guard';
+import { detectFormValidationErrors } from '../modules/rescue-loop';
+import { normalizeDateToYMD } from '../modules/date-formatter';
 import { ExtensionMessage, FieldTransferFailure, FormInspectionReport, TransferResult } from '../types';
 
 let currentHighlightedElement: HTMLElement | null = null;
@@ -127,6 +130,13 @@ function scanPage(): FormInspectionReport | null {
   if (!target) return null;
 
   const report = inspectFormElement(target, window.location.href);
+
+  // Feature 1: Scam & Phishing Guard evaluation
+  report.securityReport = evaluateSecurity(window.location.href, target);
+
+  // Feature 2: Rescue Loop active error detection
+  report.rescueReport = detectFormValidationErrors(target, report.fields);
+
   lastInspectionReport = report;
   return report;
 }
@@ -184,6 +194,11 @@ function clearHighlight() {
  * Framework-aware input value setting (supports React controlled components)
  */
 function setNativeValue(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
+  // If target element is an HTML5 date input, guarantee yyyy-MM-dd format to avoid browser validation warning
+  if (element instanceof HTMLInputElement && element.type === 'date') {
+    value = normalizeDateToYMD(value);
+  }
+
   const prototype =
     element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   const nativeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
@@ -286,7 +301,22 @@ function fillFields(answers: Record<string, any>): TransferResult {
         el.dispatchEvent(new Event('input', { bubbles: true }));
         transferredCount++;
       } else if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-        setNativeValue(el, String(value));
+        let valToSet = String(value);
+        if (el instanceof HTMLInputElement && el.type === 'date') {
+          valToSet = normalizeDateToYMD(valToSet);
+        } else if (el instanceof HTMLInputElement && el.type === 'text' && field.type === 'date') {
+          const placeholder = (el.placeholder || '').toLowerCase();
+          const ymd = normalizeDateToYMD(valToSet);
+          if (ymd) {
+            const [y, m, d] = ymd.split('-');
+            if (placeholder.includes('dd/mm') || placeholder.includes('d/m')) {
+              valToSet = `${d}/${m}/${y}`;
+            } else if (placeholder.includes('dd-mm') || placeholder.includes('d-m')) {
+              valToSet = `${d}-${m}-${y}`;
+            }
+          }
+        }
+        setNativeValue(el, valToSet);
         transferredCount++;
       } else {
         failedFields.push({
@@ -343,6 +373,16 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
         case 'VAZHIKA_FILL_FIELDS': {
           const result = fillFields(message.answers);
           sendResponse({ type: 'VAZHIKA_FILL_RESULT', result });
+          return true;
+        }
+
+        case 'VAZHIKA_DETECT_RESCUE': {
+          const target = findTargetForm();
+          const rescue = detectFormValidationErrors(target, lastInspectionReport?.fields || []);
+          if (lastInspectionReport) {
+            lastInspectionReport.rescueReport = rescue;
+          }
+          sendResponse({ type: 'VAZHIKA_RESCUE_RESULT', rescue });
           return true;
         }
 

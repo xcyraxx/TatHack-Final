@@ -1,5 +1,6 @@
 import { AccessibilityFinding, FormInspectionReport, FieldDefinition, SupportedFieldType } from '../../types';
 import { getPlainLanguageHelp } from '../plain-language/dictionary';
+import { normalizeDateToYMD } from '../date-formatter';
 
 let fieldIndexCounter = 0;
 
@@ -432,6 +433,10 @@ export function inspectFormElement(formElement: HTMLElement, pageUrl: string = '
       initialVal = input.checked;
     } else {
       initialVal = input.value || '';
+    }
+
+    if (supportedType === 'date' && initialVal && typeof initialVal === 'string') {
+      initialVal = normalizeDateToYMD(initialVal) || initialVal;
     }
 
     fields.push({
