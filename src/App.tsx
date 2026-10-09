@@ -50,6 +50,15 @@ export const App: React.FC = () => {
     return res;
   };
 
+  const runRescueDetection = () => {
+    if (!report) return;
+    const form = document.getElementById("embedded-demo-form") as HTMLFormElement;
+    if (form) {
+      const rescue = detectFormValidationErrors(form, report.fields);
+      setReport({ ...report, rescueReport: rescue });
+    }
+  };
+
   const handleOriginalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const form = document.getElementById('embedded-demo-form') as HTMLFormElement;
