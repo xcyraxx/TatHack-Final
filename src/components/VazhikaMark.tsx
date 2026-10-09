@@ -11,7 +11,7 @@ interface Props {
  * Single stroke weight, optical centring — legible from 16px to 32px.
  */
 export const VazhikaMark: React.FC<Props> = ({ size = 24, tone = 'on-light' }) => {
-  const archColor = tone === 'on-dark' ? '#E8A34A' : '#123B35';
+  const archColor = tone === 'on-dark' ? '#E8A34A' : 'var(--km-accent-text, #123B35)';
   const pathColor = tone === 'on-dark' ? '#D9F3E5' : '#E8A34A';
 
   return (

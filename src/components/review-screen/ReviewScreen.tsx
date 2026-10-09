@@ -3,6 +3,7 @@ import { FieldDefinition } from '../../types';
 import { useAccessibility } from '../../modules/accessibility-controls/AccessibilityProvider';
 import { Volume2, VolumeX, Pencil, ArrowRight, ArrowLeft } from 'lucide-react';
 import { speechService } from '../../modules/speech-service';
+import { CopyButton } from '../CopyNotification';
 
 interface Props {
   fields: FieldDefinition[];
@@ -23,6 +24,13 @@ export const ReviewScreen: React.FC<Props> = ({
 }) => {
   const { language, announce } = useAccessibility();
   const [isReadingAll, setIsReadingAll] = useState(false);
+
+  const answersSummary = fields
+    .map((f, i) => {
+      const val = answers[f.id] ?? answers[f.name] ?? (language === 'ml' ? 'നൽകിയിട്ടില്ല' : 'Not provided');
+      return `${i + 1}. ${f.label}: ${val}`;
+    })
+    .join('\n');
 
   const handleReadAloud = () => {
     if (isReadingAll) {
@@ -97,15 +105,25 @@ export const ReviewScreen: React.FC<Props> = ({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleReadAloud}
-          className="km-btn km-btn--secondary km-btn--sm"
-          aria-pressed={isReadingAll}
-        >
-          {isReadingAll ? <VolumeX size={15} aria-hidden="true" /> : <Volume2 size={15} aria-hidden="true" />}
-          <span>{isReadingAll ? language === 'ml' ? 'നിർത്തുക' : 'Stop reading' : language === 'ml' ? 'എല്ലാം കേൾക്കുക' : 'Read answers aloud'}</span>
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <CopyButton
+            variant="white"
+            textToCopy={answersSummary}
+            label={language === 'ml' ? 'പകർത്തുക' : 'Copy summary'}
+            copiedTitle={language === 'ml' ? 'വിവരങ്ങൾ പകർത്തി!' : 'Answers copied!'}
+            copiedSubtitle={language === 'ml' ? 'ക്ലിപ്പ്ബോർഡിലേക്ക് സൂക്ഷിച്ചു' : 'Answers copied to clipboard'}
+          />
+
+          <button
+            type="button"
+            onClick={handleReadAloud}
+            className="km-btn km-btn--secondary km-btn--sm"
+            aria-pressed={isReadingAll}
+          >
+            {isReadingAll ? <VolumeX size={15} aria-hidden="true" /> : <Volume2 size={15} aria-hidden="true" />}
+            <span>{isReadingAll ? language === 'ml' ? 'നിർത്തുക' : 'Stop reading' : language === 'ml' ? 'എല്ലാം കേൾക്കുക' : 'Read answers aloud'}</span>
+          </button>
+        </div>
       </div>
 
       {missingFields.length > 0 && (

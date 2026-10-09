@@ -130,7 +130,7 @@
         This form contains real-world accessibility defects: missing labels, asterisk-only required indicators, unsemantic input types, un-grouped radio buttons, and confusing terminology.
       </p>
 
-      <form id="public-service-form" action="#" onsubmit="event.preventDefault(); handleSubmit();">
+      <form id="public-service-form" action="#">
         <!-- Defect 1: Missing label; placeholder used as only hint -->
         <div class="form-group">
           <span style="font-size: 0.8rem; color: #dc2626; font-weight: 600;">[Defect: Missing &lt;label&gt;]</span>
@@ -250,19 +250,6 @@
     </div>
 
     <!-- Script to simulate form handling and connect with content script -->
-    <script type="module" src="/src/content/index.ts"></script>
-    <script>
-      function handleSubmit() {
-        const form = document.getElementById('public-service-form');
-        const formData = new FormData(form);
-        const entries = Object.fromEntries(formData.entries());
-        
-        const resultBox = document.getElementById('submission-result');
-        const dataBox = document.getElementById('submission-data');
-        resultBox.style.display = 'block';
-        dataBox.innerHTML = '<pre>' + JSON.stringify(entries, null, 2) + '</pre>';
-        resultBox.scrollIntoView({ behavior: 'smooth' });
-      }
-    </script>
+    <script type="module" src="/src/test-page.ts"></script>
   </body>
 </html>

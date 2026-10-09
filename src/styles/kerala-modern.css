@@ -48,12 +48,17 @@
   /* Colour — surfaces & text */
   --km-warm-white: #f8faf7;
   --km-white: #ffffff;
+  --km-pure-white: #ffffff;
   --km-text-primary: #172522;
   --km-text-muted: #53635d;
   --km-text-on-dark: #ffffff;
   --km-text-on-dark-muted: #c3ddd2;
   --km-border: #dde5df;
   --km-border-strong: #c3cfc8;
+
+  /* Accent text & links (in light mode: forest green) */
+  --km-accent-text: #123b35;
+  --km-accent-hover: #0b2925;
 
   /* Colour — state */
   --km-error: #b42318;
@@ -137,6 +142,241 @@
   --km-success-surface: #ffffff;
   --km-info: #00315a;
   --km-shadow-pop: 0 0 0 1px #000000;
+}
+
+/* Dark mode token overrides */
+[data-dark-mode='true'] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --km-warm-white: #0f1614;
+  --km-white: #17221f;
+  --km-mint-tint: #1c2e29;
+
+  /* Text — always high contrast and crisp against dark backgrounds */
+  --km-text-primary: #f0f6f3;
+  --km-text-muted: #a3b8b0;
+  --km-text-on-dark: #ffffff;
+  --km-text-on-dark-muted: #b8cec6;
+
+  /* Accent text & interactive highlights — vibrant Kerala mint/jade */
+  --km-accent-text: #5eead4;
+  --km-accent-hover: #a7f3d0;
+  --km-forest: #225e53;
+  --km-deep-forest: #0d1e1a;
+  --km-mint: #2b6154;
+  --km-gold: #f59e0b;
+
+  /* Hairlines and borders */
+  --km-border: #243530;
+  --km-border-strong: #364e47;
+
+  /* State colors & surfaces in dark mode */
+  --km-error: #f87171;
+  --km-error-surface: #261414;
+  --km-warning: #fbbf24;
+  --km-warning-surface: #2a1f0a;
+  --km-success: #34d399;
+  --km-success-surface: #0e241b;
+  --km-info: #38bdf8;
+
+  /* Shadows */
+  --km-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --km-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --km-shadow-pop: 3px 3px 0 #081512;
+}
+
+/* Dark mode component-specific contrast protections */
+[data-dark-mode='true'] {
+  background-color: var(--km-warm-white);
+  color: var(--km-text-primary);
+}
+
+[data-dark-mode='true'] body {
+  background-color: var(--km-warm-white);
+  color: var(--km-text-primary);
+}
+
+/* Primary buttons & NeuButton variants in dark mode */
+[data-dark-mode='true'] .km-btn--primary,
+[data-dark-mode='true'] .km-neu-button--forest,
+[data-dark-mode='true'] .km-btn-neu--forest {
+  background-color: #225e53;
+  color: #ffffff;
+  border-color: #388072;
+  box-shadow: 3px 3px 0px #071310;
+}
+
+[data-dark-mode='true'] .km-btn--primary:hover:not(:disabled),
+[data-dark-mode='true'] .km-neu-button--forest:hover:not(:disabled),
+[data-dark-mode='true'] .km-btn-neu--forest:hover:not(:disabled) {
+  background-color: #2b7366;
+  border-color: #5eead4;
+  box-shadow: none;
+}
+
+[data-dark-mode='true'] .km-neu-button--mint,
+[data-dark-mode='true'] .km-btn-neu--mint {
+  background-color: #1a4d41;
+  color: #d9f3e5;
+  border-color: #2e7a68;
+  box-shadow: 3px 3px 0px #071310;
+}
+
+[data-dark-mode='true'] .km-neu-button--white,
+[data-dark-mode='true'] .km-btn-neu--white {
+  background-color: #1e2d29;
+  color: #f0f6f3;
+  border-color: #384f47;
+  box-shadow: 3px 3px 0px #071310;
+}
+
+[data-dark-mode='true'] .km-neu-button--gold,
+[data-dark-mode='true'] .km-btn-neu--gold {
+  background-color: #d9822b;
+  color: #ffffff;
+  border-color: #f59e0b;
+  box-shadow: 3px 3px 0px #071310;
+}
+
+/* Toolbar & Toggles in dark mode */
+[data-dark-mode='true'] .km-toolbar {
+  background-color: #15201d;
+  border-color: #243530;
+}
+
+[data-dark-mode='true'] .km-toggle {
+  background-color: #1a2723;
+  border-color: #364e47;
+  color: #a3b8b0;
+}
+
+[data-dark-mode='true'] .km-toggle:hover {
+  background-color: #20332d;
+  border-color: #5eead4;
+  color: #5eead4;
+}
+
+[data-dark-mode='true'] .km-toggle[aria-pressed='true'],
+[data-dark-mode='true'] .km-toggle--on {
+  background-color: #225e53;
+  border-color: #3c8f80;
+  color: #ffffff;
+}
+
+[data-dark-mode='true'] .km-toolbar-handle {
+  background-color: #225e53;
+  color: #ffffff;
+  border: 1px solid #3c8f80;
+  border-bottom: none;
+}
+
+[data-dark-mode='true'] .km-dark-pill {
+  background-color: #364e47;
+}
+
+[data-dark-mode='true'] .km-dark-pill[aria-pressed='true'] {
+  background-color: #2a7366;
+  box-shadow: 0 1px 6px rgba(94, 234, 212, 0.4);
+}
+
+[data-dark-mode='true'] .km-dark-pill[aria-pressed='true']::after {
+  background: #d9f3e5;
+}
+
+/* Form Controls in dark mode */
+[data-dark-mode='true'] .km-control {
+  background-color: #15201d;
+  color: #f0f6f3;
+  border-color: #364e47;
+}
+
+[data-dark-mode='true'] .km-control:hover {
+  border-color: #5eead4;
+}
+
+[data-dark-mode='true'] .km-control:focus {
+  border-color: #5eead4;
+  outline: none;
+}
+
+[data-dark-mode='true'] .km-control::placeholder {
+  color: #728c83;
+}
+
+[data-dark-mode='true'] select.km-control option {
+  background-color: #15201d;
+  color: #f0f6f3;
+}
+
+[data-dark-mode='true'] .km-choice {
+  background-color: #17221f;
+  color: #f0f6f3;
+  border-color: #243530;
+}
+
+[data-dark-mode='true'] .km-choice:hover {
+  background-color: #1e2c28;
+}
+
+[data-dark-mode='true'] .km-choice--on {
+  background-color: #1f3730;
+  box-shadow: inset 3px 0 0 #5eead4;
+}
+
+[data-dark-mode='true'] .km-choice-group__legend {
+  background-color: #121c19;
+  color: #a3b8b0;
+  border-color: #243530;
+}
+
+/* Surfaces and Panels */
+[data-dark-mode='true'] .km-panel,
+[data-dark-mode='true'] .km-card,
+[data-dark-mode='true'] .km-guided,
+[data-dark-mode='true'] .km-guided__top,
+[data-dark-mode='true'] .km-guided__progress,
+[data-dark-mode='true'] .km-guided__nav,
+[data-dark-mode='true'] .km-tabs,
+[data-dark-mode='true'] .km-popup__foot {
+  background-color: #17221f;
+  border-color: #243530;
+}
+
+/* Status Notices */
+[data-dark-mode='true'] .km-notice {
+  background-color: #17221f;
+  color: #f0f6f3;
+  border-color: #364e47;
+}
+
+[data-dark-mode='true'] .km-notice--success {
+  background-color: #0e241b;
+  border-color: #34d399;
+  color: #ecfdf5;
+}
+
+[data-dark-mode='true'] .km-notice--warning {
+  background-color: #2a1f0a;
+  border-color: #fbbf24;
+  color: #fef3c7;
+}
+
+[data-dark-mode='true'] .km-notice--error {
+  background-color: #261414;
+  border-color: #f87171;
+  color: #fef2f2;
+}
+
+[data-dark-mode='true'] .km-scanline::after,
+[data-dark-mode='true'] .km-progress__fill {
+  background-color: #5eead4;
+}
+
+[data-dark-mode='true'] :focus-visible {
+  outline: 3px solid #5eead4;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(94, 234, 212, 0.25);
 }
 
 /* Text size scaling */
@@ -328,7 +568,7 @@ code {
 
 /* Wordmark on light surfaces (guided mode chrome) */
 .km-wordmark--dark .km-wordmark__name {
-  color: var(--km-forest);
+  color: var(--km-accent-text, var(--km-forest));
 }
 
 .km-topbar__note {
@@ -355,17 +595,39 @@ code {
    -------------------------------------------------------------------------- */
 .km-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--km-space-2);
-  padding: 0.5rem 1.5rem;
+  padding: 0.625rem 1.5rem;
   background-color: var(--km-white);
   border-bottom: 1px solid var(--km-border);
   font-size: var(--km-fs-small);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.km-toolbar::-webkit-scrollbar {
+  display: none;
 }
 
 .km-toolbar--compact {
   padding: 0.5rem 1rem;
+  gap: var(--km-space-1);
+}
+
+.km-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.km-toolbar__divider {
+  width: 1px;
+  height: 20px;
+  background: var(--km-border);
+  flex-shrink: 0;
+  margin: 0 0.25rem;
 }
 
 .km-toolbar__end {
@@ -373,39 +635,201 @@ code {
   display: flex;
   align-items: center;
   gap: var(--km-space-2);
+  flex-shrink: 0;
 }
 
+/* Modern pill toggle button */
 .km-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: var(--km-control-h-sm);
-  padding: 0 0.65rem;
-  background-color: var(--km-white);
-  color: var(--km-text-primary);
-  border: 1px solid var(--km-border-strong);
-  border-radius: var(--km-radius-sm);
+  gap: 0.3rem;
+  height: 30px;
+  padding: 0 0.7rem;
+  background-color: transparent;
+  color: var(--km-text-muted);
+  border: 1.5px solid var(--km-border);
+  border-radius: var(--km-radius-pill);
   font-family: inherit;
   font-size: var(--km-fs-meta);
-  font-weight: var(--km-fw-semibold);
+  font-weight: var(--km-fw-medium);
   line-height: 1;
   cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .km-toggle:hover {
-  border-color: var(--km-forest);
+  border-color: var(--km-accent-text, var(--km-forest));
+  color: var(--km-accent-text, var(--km-forest));
+  background-color: var(--km-mint-tint);
+}
+
+.km-toggle:focus-visible {
+  outline: 2px solid var(--km-forest);
+  outline-offset: 2px;
 }
 
 .km-toggle[aria-pressed='true'],
 .km-toggle--on {
-  background-color: var(--km-mint);
+  background-color: var(--km-forest);
   border-color: var(--km-forest);
-  color: var(--km-deep-forest);
+  color: var(--km-text-on-dark);
+  box-shadow: 0 1px 3px rgba(18, 59, 53, 0.3);
+}
+
+.km-toggle[aria-pressed='true']:hover,
+.km-toggle--on:hover {
+  background-color: var(--km-deep-forest);
+  border-color: var(--km-deep-forest);
 }
 
 .km-toggle svg {
   flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+}
+
+.km-toggle__size-label {
+  font-weight: var(--km-fw-bold);
+  font-size: 0.8125rem;
+  letter-spacing: -0.02em;
+}
+
+/* ---- Animated dark-mode pill (sliding thumb switch) ---- */
+.km-dark-pill-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.km-dark-pill-label {
+  font-size: var(--km-fs-meta);
+  font-weight: var(--km-fw-medium);
+  color: var(--km-text-muted);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.km-dark-pill {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: var(--km-radius-pill);
+  background: var(--km-border-strong);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.25s ease, box-shadow 0.15s ease;
+}
+
+.km-dark-pill:focus-visible {
+  outline: 2px solid var(--km-forest);
+  outline-offset: 2px;
+}
+
+.km-dark-pill[aria-pressed='true'] {
+  background: var(--km-forest);
+  box-shadow: 0 1px 4px rgba(18, 59, 53, 0.4);
+}
+
+.km-dark-pill::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.km-dark-pill[aria-pressed='true']::after {
+  transform: translateX(20px);
+  background: #d9f3e5;
+}
+
+.km-dark-pill-icon {
+  display: flex;
+  align-items: center;
+  color: var(--km-text-muted);
+  flex-shrink: 0;
+}
+/* ---- Floating edge-reveal toolbar ---- */
+/*
+ * .km-toolbar-float-root  – position anchor fixed to bottom of its parent
+ * .km-toolbar--float      – the bar itself, translated off-screen by default
+ * .km-toolbar--revealed   – slides into view (JS adds this class)
+ * .km-toolbar-handle      – thin always-visible peek strip
+ */
+.km-toolbar-float-root {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  pointer-events: none; /* let clicks fall through when collapsed */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Peek handle — the 28px strip that's always visible */
+.km-toolbar-handle {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 28px;
+  background: var(--km-forest);
+  color: var(--km-text-on-dark);
+  border-radius: var(--km-radius-pill) var(--km-radius-pill) 0 0;
+  cursor: pointer;
+  box-shadow: 0 -2px 8px rgba(18, 59, 53, 0.25);
+  opacity: 0.85;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.km-toolbar-handle:hover,
+.km-toolbar--revealed ~ .km-toolbar-handle {
+  opacity: 1;
+}
+
+/* The floating bar */
+.km-toolbar--float {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  justify-content: center;
+  padding: 0.6rem 1.5rem;
+  border-bottom: none;
+  border-top: 1px solid var(--km-border);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  border-radius: var(--km-radius-md) var(--km-radius-md) 0 0;
+
+  /* Slide up from fully off-screen */
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.km-toolbar--float.km-toolbar--revealed {
+  transform: translateY(0);
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .km-toolbar--float {
+    transition: none;
+  }
+}
+[data-reduced-motion='true'] .km-toolbar--float {
+  transition: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -427,7 +851,7 @@ code {
   text-align: center;
   cursor: pointer;
   transition: background-color 0.12s ease, border-color 0.12s ease,
-    color 0.12s ease;
+    color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 .km-btn:disabled {
@@ -436,16 +860,220 @@ code {
 
 .km-btn--primary {
   background-color: var(--km-forest);
-  color: var(--km-white);
+  color: var(--km-text-on-dark);
+  border: 1px solid var(--km-deep-forest);
+  box-shadow: 3px 3px 0px var(--km-deep-forest);
 }
 
 .km-btn--primary:hover:not(:disabled) {
-  background-color: var(--km-deep-forest);
+  background-color: var(--km-forest);
+  box-shadow: none;
+  transform: translate(3px, 3px);
+}
+
+.km-btn--primary:active:not(:disabled) {
+  box-shadow: none;
+  transform: translate(3px, 3px);
 }
 
 .km-btn--primary:disabled {
   background-color: var(--km-border);
   color: var(--km-text-muted);
+  border-color: var(--km-border);
+  box-shadow: none;
+  transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   Tactile Kerala Modern NeuButton (Neubrutalist hard-shadow button)
+   -------------------------------------------------------------------------- */
+.km-neu-button,
+.km-btn-neu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  min-height: var(--km-control-h);
+  width: fit-content;
+  font-family: var(--km-font);
+  font-size: var(--km-fs-base);
+  font-weight: var(--km-fw-medium);
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  background-color: var(--km-forest);
+  color: var(--km-text-on-dark);
+  border: 1px solid var(--km-deep-forest);
+  border-radius: var(--km-radius-xs);
+  box-shadow: 3px 3px 0px var(--km-deep-forest);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease, border-color 0.12s ease;
+  user-select: none;
+}
+
+.km-neu-button:hover:not(:disabled),
+.km-btn-neu:hover:not(:disabled) {
+  box-shadow: none;
+  transform: translate(3px, 3px);
+  background-color: var(--km-forest);
+}
+
+.km-neu-button:active:not(:disabled),
+.km-btn-neu:active:not(:disabled) {
+  box-shadow: none;
+  transform: translate(3px, 3px);
+}
+
+.km-neu-button:focus-visible,
+.km-btn-neu:focus-visible {
+  outline: 3px solid var(--km-forest);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--km-mint);
+}
+
+.km-neu-button:disabled,
+.km-btn-neu:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* NeuButton Variants in Kerala Modern Palette */
+.km-neu-button--forest,
+.km-btn-neu--forest {
+  background-color: var(--km-forest);
+  color: var(--km-text-on-dark);
+  border-color: var(--km-deep-forest);
+  box-shadow: 3px 3px 0px var(--km-deep-forest);
+}
+
+.km-neu-button--gold,
+.km-btn-neu--gold {
+  background-color: var(--km-gold);
+  color: var(--km-text-primary);
+  border-color: var(--km-deep-forest);
+  box-shadow: 3px 3px 0px var(--km-deep-forest);
+}
+
+.km-neu-button--mint,
+.km-btn-neu--mint {
+  background-color: var(--km-mint);
+  color: var(--km-deep-forest);
+  border-color: var(--km-deep-forest);
+  box-shadow: 3px 3px 0px var(--km-deep-forest);
+}
+
+.km-neu-button--white,
+.km-btn-neu--white {
+  background-color: var(--km-white);
+  color: var(--km-text-primary);
+  border-color: var(--km-deep-forest);
+  box-shadow: 3px 3px 0px var(--km-deep-forest);
+}
+
+/* --------------------------------------------------------------------------
+   Slide-in Copy Notification Toast (Kerala Modern)
+   -------------------------------------------------------------------------- */
+.km-toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 320px;
+  max-width: calc(100vw - 2rem);
+  pointer-events: none;
+}
+
+.km-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--km-forest);
+  color: var(--km-text-on-dark);
+  border: 1px solid var(--km-deep-forest);
+  border-left: 4px solid var(--km-mint);
+  border-radius: var(--km-radius-xs);
+  box-shadow: 3px 3px 0px var(--km-deep-forest);
+  font-family: var(--km-font);
+  font-size: var(--km-fs-small);
+  line-height: 1.4;
+  animation: km-toast-slide-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.km-toast__icon {
+  color: var(--km-mint);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.km-toast__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.km-toast__title {
+  display: block;
+  font-weight: var(--km-fw-semibold);
+  font-size: var(--km-fs-small);
+  color: var(--km-text-on-dark);
+}
+
+.km-toast__text {
+  display: block;
+  font-size: var(--km-fs-meta);
+  color: var(--km-text-on-dark-muted);
+  margin-top: 0.15rem;
+  word-break: break-word;
+}
+
+.km-toast__close {
+  background: transparent;
+  border: none;
+  color: var(--km-text-on-dark-muted);
+  padding: 2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--km-radius-xs);
+  transition: color 0.12s ease;
+  flex-shrink: 0;
+}
+
+.km-toast__close:hover {
+  color: var(--km-text-on-dark);
+}
+
+@keyframes km-toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.km-toast--exiting {
+  animation: km-toast-slide-out 0.22s ease forwards;
+}
+
+@keyframes km-toast-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
 }
 
 .km-btn--secondary:disabled {
@@ -473,7 +1101,7 @@ code {
 }
 
 .km-btn--quiet:hover:not(:disabled) {
-  color: var(--km-forest);
+  color: var(--km-accent-text, var(--km-forest));
   background-color: var(--km-mint-tint);
 }
 
@@ -505,13 +1133,13 @@ code {
   display: inline-flex;
   align-items: center;
   min-height: 32px;
-  color: var(--km-forest);
+  color: var(--km-accent-text, var(--km-forest));
   font-weight: var(--km-fw-semibold);
   text-underline-offset: 3px;
 }
 
 .km-link:hover {
-  color: var(--km-deep-forest);
+  color: var(--km-accent-hover, var(--km-deep-forest));
 }
 
 /* --------------------------------------------------------------------------
@@ -623,7 +1251,7 @@ code {
 
 .km-progress-meta__step {
   font-weight: var(--km-fw-semibold);
-  color: var(--km-forest);
+  color: var(--km-accent-text, var(--km-forest));
 }
 
 .km-progress {
@@ -634,7 +1262,7 @@ code {
 
 .km-progress__fill {
   height: 100%;
-  background-color: var(--km-forest);
+  background-color: var(--km-accent-text, var(--km-forest));
   transition: width 0.25s ease;
 }
 
@@ -700,13 +1328,13 @@ code {
 
 .km-question-block__required {
   font-weight: var(--km-fw-semibold);
-  color: var(--km-forest);
+  color: var(--km-accent-text, var(--km-forest));
 }
 
 .km-help {
   margin-top: var(--km-space-4);
   padding-left: 0.85rem;
-  border-left: 2px solid var(--km-forest);
+  border-left: 2px solid var(--km-accent-text, var(--km-forest));
   font-size: var(--km-fs-base);
   line-height: var(--km-lh-relaxed);
   color: var(--km-text-muted);
@@ -788,7 +1416,7 @@ code {
 .km-voice-btn--on {
   background-color: var(--km-forest);
   border-color: var(--km-forest);
-  color: var(--km-white);
+  color: var(--km-text-on-dark);
 }
 
 .km-voice-status {
@@ -952,11 +1580,11 @@ code {
 }
 
 .km-finding__row--action {
-  color: var(--km-forest);
+  color: var(--km-accent-text, var(--km-forest));
 }
 
 .km-finding__row--action strong {
-  color: var(--km-forest);
+  color: var(--km-accent-text, var(--km-forest));
 }
 
 .km-finding__support {
@@ -1006,7 +1634,7 @@ code {
 
 .km-review-row__required {
   font-weight: var(--km-fw-semibold);
-  color: var(--km-forest);
+  color: var(--km-accent-text, var(--km-forest));
 }
 
 .km-review-row__value {
@@ -1099,12 +1727,12 @@ code {
 }
 
 .km-tab:hover {
-  color: var(--km-forest);
+  color: var(--km-accent-hover, var(--km-forest));
 }
 
 .km-tab--on {
-  color: var(--km-forest);
-  border-bottom-color: var(--km-forest);
+  color: var(--km-accent-text, var(--km-forest));
+  border-bottom-color: var(--km-accent-text, var(--km-forest));
 }
 
 .km-tabs__end {

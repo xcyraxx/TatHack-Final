@@ -14,6 +14,8 @@ interface AccessibilityContextType {
   setReducedMotion: (enabled: boolean) => void;
   voiceEnabled: boolean;
   setVoiceEnabled: (enabled: boolean) => void;
+  darkMode: boolean;
+  setDarkMode: (enabled: boolean) => void;
   announcement: string;
   announce: (message: string) => void;
 }
@@ -39,6 +41,10 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
     return localStorage.getItem('vazhika_voice_enabled') === 'true';
+  });
+
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('vazhika_dark_mode') === 'true';
   });
 
   const [announcement, setAnnouncement] = useState<string>('');
@@ -67,6 +73,11 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem('vazhika_voice_enabled', String(voiceEnabled));
   }, [voiceEnabled]);
 
+  useEffect(() => {
+    localStorage.setItem('vazhika_dark_mode', String(darkMode));
+    document.documentElement.setAttribute('data-dark-mode', String(darkMode));
+  }, [darkMode]);
+
   const announce = (message: string) => {
     setAnnouncement(message);
     // Clear after 3 seconds so subsequent identical messages trigger re-announcement
@@ -88,6 +99,8 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         setReducedMotion,
         voiceEnabled,
         setVoiceEnabled,
+        darkMode,
+        setDarkMode,
         announcement,
         announce,
       }}

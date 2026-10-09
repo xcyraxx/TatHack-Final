@@ -4,6 +4,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { AccessibilityProvider } from '../modules/accessibility-controls/AccessibilityProvider';
 import { GuidedWorkflow } from '../components/guided-workflow/GuidedWorkflow';
 import { ReviewScreen } from '../components/review-screen/ReviewScreen';
+import { NeuButton } from '../components/NeuButton';
+import { CopyButton } from '../components/CopyNotification';
 import { FormInspectionReport } from '../types';
 
 const mockReport: FormInspectionReport = {
@@ -109,5 +111,36 @@ describe('GuidedWorkflow UI & Keyboard Interaction', () => {
     const transferBtn = screen.getByRole('button', { name: /Transfer Answers to Webpage/i });
     fireEvent.click(transferBtn);
     expect(onConfirm).toHaveBeenCalled();
+  });
+
+  it('renders NeuButton with Kerala Modern color scheme variants and handles clicks', () => {
+    const handleClick = vi.fn();
+    const { rerender } = render(<NeuButton onClick={handleClick}>Submit Application</NeuButton>);
+
+    const btn = screen.getByRole('button', { name: /Submit Application/i });
+    expect(btn).toBeInTheDocument();
+    expect(btn).toHaveClass('km-neu-button');
+    expect(btn).toHaveClass('km-neu-button--forest');
+
+    fireEvent.click(btn);
+    expect(handleClick).toHaveBeenCalledTimes(1);
+
+    // Test gold variant
+    rerender(<NeuButton variant="gold">Special Action</NeuButton>);
+    expect(screen.getByRole('button', { name: /Special Action/i })).toHaveClass('km-neu-button--gold');
+  });
+
+  it('renders CopyButton and triggers slide-in notification toast upon copying', async () => {
+    render(<CopyButton textToCopy="Test Copy Text" label="Copy Text" copiedTitle="Copied successfully!" />);
+
+    const copyBtn = screen.getByRole('button', { name: /Copy Text/i });
+    expect(copyBtn).toBeInTheDocument();
+
+    fireEvent.click(copyBtn);
+
+    // Slide-in toast should appear with title and status role
+    const toast = await screen.findByRole('status');
+    expect(toast).toBeInTheDocument();
+    expect(toast).toHaveTextContent('Copied successfully!');
   });
 });
