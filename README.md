@@ -117,19 +117,3 @@ npm test
 | `sidePanel` | Allows Guided Mode to sit alongside the webpage without obscuring it. |
 
 **Privacy Pledge**: Vazhika runs **100% locally** in the browser. No answers, keystrokes, or page contents are sent to any external server.
-
----
-
-## 🎯 Judge Demonstration Script
-
-1. **Open the Test Form**: Open `http://localhost:5173/` or open `dist/test-page.html` in Chrome with the extension loaded.
-2. **Observe the Defects**: Note the unlabelled full name, confusing "Correspondence Address", missing date hints, un-grouped radio buttons, and generic "Submit" button.
-3. **Scan with Vazhika**: Click "Scan With Vazhika" (or open popup and click "Scan this page"). Observe real DOM findings extracted with WCAG references.
-4. **Step Through Guided Mode**:
-   - Answer Question 1 ("Full Name") — observe instant focus and plain-language help.
-   - Switch language to **മലയാളം** — observe questions and explanations adapt to Malayalam.
-   - Test speech — click **Voice: ON** or click the speaker icon to hear the question read aloud.
-   - Trigger a validation error (enter an invalid email or leave a required field blank) — note the polite error announcement and instructions on how to correct it.
-5. **Review Screen**: Reach the review summary. Click "Listen to All" to hear all answers read back.
-6. **Transfer to Page**: Click **"Transfer Answers to Webpage"**.
-7. **Verify Non-Submission**: Observe the values accurately populated into the original form. Confirm that the original webpage **has not** submitted automatically, allowing the user final review and manual submission!
