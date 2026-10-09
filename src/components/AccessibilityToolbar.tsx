@@ -284,15 +284,18 @@ export const AccessibilityToolbar: React.FC<Props> = ({ onClearDraft, compact = 
         )}
       </div>
 
-      {/* Peek handle — always visible at bottom edge, invites hover */}
-      <div
+      {/* Peek handle — always visible at bottom edge, invites hover and click */}
+      <button
+        type="button"
         className="km-toolbar-handle"
-        aria-hidden="true"
+        aria-label={revealed ? (ml ? 'ആക്‌സസിബിലിറ്റി ബാർ മറയ്ക്കുക' : 'Collapse accessibility toolbar') : (ml ? 'ആക്‌സസിബിലിറ്റി ബാർ കാണിക്കുക' : 'Expand accessibility toolbar')}
+        aria-expanded={revealed}
+        onClick={() => setRevealed((v) => !v)}
         onMouseEnter={handleBarEnter}
         onMouseLeave={handleBarLeave}
       >
-        <SlidersHorizontal size={13} />
-      </div>
+        <SlidersHorizontal size={13} aria-hidden="true" />
+      </button>
     </div>
   );
 };
