@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kerala Public Service Registration Portal (Citizen Services Demo)</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 2rem;
+        background-color: #f1f5f9;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #1e293b;
+      }
+      .page-banner {
+        background-color: #123b35;
+        color: #ffffff;
+        padding: 1.5rem 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+        background: #ffffff;
+        padding: 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 1.6rem;
+        color: #0f172a;
+      }
+      .desc {
+        color: #64748b;
+        font-size: 0.95rem;
+        margin-bottom: 1.8rem;
+        line-height: 1.5;
+      }
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      .label-text {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+        font-size: 0.95rem;
+      }
+      input[type="text"],
+      input[type="date"],
+      select,
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 1rem;
+      }
+      .radio-group-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 0.3rem;
+      }
+      .radio-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .btn-submit {
+        background-color: #123b35;
+        color: #ffffff;
+        border: none;
+        padding: 0.85rem 1.8rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .btn-submit:hover {
+        background-color: #0b2925;
+      }
+      .status-box {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border: 1px dashed #94a3b8;
+        border-radius: 8px;
+        font-size: 0.88rem;
+      }
+      .badge-inaccessible {
+        background-color: #fee2e2;
+        color: #991b1b;
+        padding: 0.25rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+      /* Custom canvas widget simulating unsupported control */
+      .canvas-signature {
+        border: 2px dashed #94a3b8;
+        background-color: #f8fafc;
+        width: 100%;
+        height: 100px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+        <div>
+          <h1>Public Service Registration Portal</h1>
+          <div style="font-size: 0.9rem; color: #123b35; font-weight: 600;">Government Citizen Services Demo</div>
+        </div>
+        <span class="badge-inaccessible">Intentionally Inaccessible Test Fixture</span>
+      </div>
+
+      <p class="desc">
+        This form contains real-world accessibility defects: missing labels, asterisk-only required indicators, unsemantic input types, un-grouped radio buttons, and confusing terminology.
+      </p>
+
+      <form id="public-service-form" action="#" onsubmit="event.preventDefault(); handleSubmit();">
+        <!-- Defect 1: Missing label; placeholder used as only hint -->
+        <div class="form-group">
+          <span style="font-size: 0.8rem; color: #dc2626; font-weight: 600;">[Defect: Missing &lt;label&gt;]</span>
+          <input
+            id="fullname"
+            name="fullname"
+            type="text"
+            placeholder="Applicant full legal name as per Aadhaar"
+          />
+        </div>
+
+        <!-- Defect 2: Visual asterisk without programmatic required attribute -->
+        <div class="form-group">
+          <label class="label-text" for="email">
+            Email Address <span style="color: #dc2626;">*</span>
+          </label>
+          <!-- Defect 3: Uses generic type="text" instead of type="email" -->
+          <input
+            id="email"
+            name="email"
+            type="text"
+            placeholder="name@example.com"
+          />
+        </div>
+
+        <!-- Defect 4: Visual asterisk without required, type="text" for telephone -->
+        <div class="form-group">
+          <label class="label-text" for="phone">
+            Mobile Number <span style="color: #dc2626;">*</span>
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="text"
+            placeholder="10-digit mobile number"
+          />
+        </div>
+
+        <!-- Defect 5: Generic date without format instructions -->
+        <div class="form-group">
+          <label class="label-text" for="dob">
+            Date of Birth
+          </label>
+          <input
+            id="dob"
+            name="dob"
+            type="date"
+          />
+        </div>
+
+        <!-- Defect 6: Confusing label without plain-language explanation -->
+        <div class="form-group">
+          <label class="label-text" for="correspondence_address">
+            Correspondence Address
+          </label>
+          <textarea
+            id="correspondence_address"
+            name="correspondence_address"
+            rows="3"
+            placeholder="Permanent/Present Postal Communication Address"
+          ></textarea>
+        </div>
+
+        <!-- Defect 7: Radio buttons without <fieldset> and <legend> -->
+        <div class="form-group">
+          <span style="font-size: 0.8rem; color: #dc2626; font-weight: 600;">[Defect: Radio group without &lt;fieldset&gt; / &lt;legend&gt;]</span>
+          <div class="label-text">Select Beneficiary Category</div>
+          <div class="radio-group-container">
+            <label class="radio-item">
+              <input type="radio" name="category" value="general" />
+              <span>General Public Citizen</span>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="category" value="senior" />
+              <span>Senior Citizen (60+ years)</span>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="category" value="differently_abled" />
+              <span>Person with Disability (Divyangjan)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Defect 8: Unsupported custom widget (demonstrates honest fallback) -->
+        <div class="form-group">
+          <label class="label-text">Digital Signature Pad (Custom Canvas Control)</label>
+          <div class="canvas-signature" id="signature-canvas">
+            [Custom Unstandardized Canvas Control — Requires Manual Signature]
+          </div>
+        </div>
+
+        <!-- Required declaration checkbox -->
+        <div class="form-group">
+          <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;">
+            <input type="checkbox" id="terms" name="terms" style="margin-top: 3px;" />
+            <span style="font-size: 0.9rem; line-height: 1.4;">
+              I hereby declare that the particulars furnished above are true to the best of my knowledge and belief.
+            </span>
+          </label>
+        </div>
+
+        <!-- Defect 9: Ambiguous button label ("Submit") -->
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; align-items: center;">
+          <button type="submit" id="btn-submit" class="btn-submit">
+            Submit
+          </button>
+          <span style="font-size: 0.8rem; color: #64748b;">
+            (Clicking will validate and display simulated receipt)
+          </span>
+        </div>
+      </form>
+
+      <div id="submission-result" class="status-box" style="display: none;">
+        <h4 style="margin: 0 0 0.5rem; color: #123b35;">Submission Event Captured</h4>
+        <div id="submission-data"></div>
+      </div>
+    </div>
+
+    <!-- Script to simulate form handling and connect with content script -->
+    <script type="module" src="/src/content/index.ts"></script>
+    <script>
+      function handleSubmit() {
+        const form = document.getElementById('public-service-form');
+        const formData = new FormData(form);
+        const entries = Object.fromEntries(formData.entries());
+        
+        const resultBox = document.getElementById('submission-result');
+        const dataBox = document.getElementById('submission-data');
+        resultBox.style.display = 'block';
+        dataBox.innerHTML = '<pre>' + JSON.stringify(entries, null, 2) + '</pre>';
+        resultBox.scrollIntoView({ behavior: 'smooth' });
+      }
+    </script>
+  </body>
+</html>

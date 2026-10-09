@@ -1,0 +1,36 @@
+{
+  "name": "vazhika",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build:vite": "vite build",
+    "build:scripts": "esbuild src/content/index.ts --bundle --outfile=dist/content.js --target=chrome100 && esbuild src/background/index.ts --bundle --outfile=dist/background.js --target=chrome100",
+    "build": "tsc && npm run build:vite && npm run build:scripts",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "idb": "^8.0.2",
+    "lucide-react": "^1.16.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@types/chrome": "^0.3.4",
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "axe-core": "^4.10.3",
+    "esbuild": "^0.25.0",
+    "jsdom": "^26.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.1",
+    "vitest": "^3.0.8"
+  }
+}

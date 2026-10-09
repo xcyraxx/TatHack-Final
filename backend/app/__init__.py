@@ -1,1 +1,0 @@
-# RESCUEFOOD Backend Application Package
