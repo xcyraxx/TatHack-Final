@@ -1,6 +1,7 @@
 /**
  * Speech Service
  * Wraps SpeechSynthesis and optional SpeechRecognition with graceful fallbacks.
+ * Fully on-device, local-first Web Speech APIs without external AI/cloud dependencies.
  */
 
 export interface SpeechState {
@@ -13,9 +14,11 @@ export interface SpeechState {
 
 class SpeechService {
   private synth: SpeechSynthesis | null = null;
-  private recognition: any = null;
+  private activeRecognition: any = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private voices: SpeechSynthesisVoice[] = [];
+  private hasRecognitionSupport: boolean = false;
+  private resumeTimer: any = null;
 
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -28,22 +31,18 @@ class SpeechService {
 
     if (typeof window !== 'undefined') {
       const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRec) {
-        try {
-          this.recognition = new SpeechRec();
-          this.recognition.continuous = false;
-          this.recognition.interimResults = false;
-        } catch {
-          this.recognition = null;
-        }
-      }
+      this.hasRecognitionSupport = Boolean(SpeechRec);
     }
   }
 
-  private loadVoices() {
+  private loadVoices(): SpeechSynthesisVoice[] {
     if (this.synth) {
-      this.voices = this.synth.getVoices();
+      const list = this.synth.getVoices();
+      if (list && list.length > 0) {
+        this.voices = list;
+      }
     }
+    return this.voices;
   }
 
   public isSynthesisSupported(): boolean {
@@ -51,7 +50,7 @@ class SpeechService {
   }
 
   public isRecognitionSupported(): boolean {
-    return Boolean(this.recognition);
+    return this.hasRecognitionSupport;
   }
 
   public speak(
@@ -65,43 +64,102 @@ class SpeechService {
       return false;
     }
 
+    // Cancel any active utterance and ensure synthesis is unpaused
     this.stopSpeaking();
+    if (this.synth.paused) {
+      try {
+        this.synth.resume();
+      } catch {
+        // Ignore
+      }
+    }
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const trimmed = text.trim();
+    if (!trimmed) {
+      if (onEnd) onEnd();
+      return true;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(trimmed);
     utterance.lang = lang === 'ml' ? 'ml-IN' : 'en-IN';
     utterance.rate = 0.95;
     utterance.pitch = 1.0;
 
-    // Pick best available voice if possible
+    // Pick best available voice matching language
+    const currentVoices = this.voices.length > 0 ? this.voices : this.loadVoices();
     if (lang === 'ml') {
-      const mlVoice = this.voices.find((v) => v.lang.startsWith('ml'));
+      const mlVoice = currentVoices.find((v) => v.lang && v.lang.toLowerCase().startsWith('ml'));
       if (mlVoice) utterance.voice = mlVoice;
     } else {
-      const enVoice = this.voices.find((v) => v.lang.startsWith('en-IN') || v.lang.startsWith('en-GB') || v.lang.startsWith('en'));
+      const enVoice = currentVoices.find(
+        (v) =>
+          v.lang &&
+          (v.lang.toLowerCase().startsWith('en-in') ||
+            v.lang.toLowerCase().startsWith('en-gb') ||
+            v.lang.toLowerCase().startsWith('en'))
+      );
       if (enVoice) utterance.voice = enVoice;
     }
 
-    utterance.onend = () => {
+    const cleanup = () => {
+      if (this.resumeTimer) {
+        clearInterval(this.resumeTimer);
+        this.resumeTimer = null;
+      }
       this.currentUtterance = null;
+    };
+
+    utterance.onend = () => {
+      cleanup();
       if (onEnd) onEnd();
     };
 
     utterance.onerror = (e) => {
-      this.currentUtterance = null;
-      if (onError) onError(e);
+      cleanup();
+      // 'canceled' or 'interrupted' errors are normal when a user navigates away or stops speaking
+      if (e.error !== 'canceled' && e.error !== 'interrupted') {
+        if (onError) onError(e);
+      }
     };
 
+    // Retain instance reference on service to protect against Chrome garbage-collection bug
     this.currentUtterance = utterance;
-    
-    // Quick workaround for Chrome bug where long speech gets cancelled silently:
-    // https://stackoverflow.com/questions/21947730/chrome-speech-synthesis-with-longer-texts
-    this.synth.speak(utterance);
-    return true;
+
+    // Chromium bug workaround: Keep long speech alive by pulsing resume
+    this.resumeTimer = setInterval(() => {
+      if (this.synth && this.synth.speaking) {
+        try {
+          this.synth.pause();
+          this.synth.resume();
+        } catch {
+          // Ignore
+        }
+      } else {
+        cleanup();
+      }
+    }, 10000);
+
+    try {
+      this.synth.speak(utterance);
+      return true;
+    } catch (err) {
+      cleanup();
+      if (onError) onError(err);
+      return false;
+    }
   }
 
   public stopSpeaking(): void {
+    if (this.resumeTimer) {
+      clearInterval(this.resumeTimer);
+      this.resumeTimer = null;
+    }
     if (this.synth) {
-      this.synth.cancel();
+      try {
+        this.synth.cancel();
+      } catch {
+        // Ignore
+      }
       this.currentUtterance = null;
     }
   }
@@ -110,50 +168,106 @@ class SpeechService {
     return Boolean(this.synth && this.synth.speaking);
   }
 
+  /**
+   * Starts speech-to-text recognition.
+   * Creates a fresh SpeechRecognition instance on every session to avoid InvalidStateError.
+   */
   public startListening(
     lang: 'en' | 'ml' = 'en',
     onResult: (transcript: string) => void,
     onError: (error: string) => void,
     onEnd?: () => void
   ): boolean {
-    if (!this.recognition) {
-      onError('Speech recognition is not supported or permission was denied.');
+    const SpeechRec =
+      typeof window !== 'undefined'
+        ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        : null;
+
+    if (!SpeechRec) {
+      onError('Speech recognition is not supported in this browser.');
       return false;
     }
 
-    try {
-      this.recognition.lang = lang === 'ml' ? 'ml-IN' : 'en-IN';
+    // Stop previous instance if still alive
+    this.stopListening();
 
-      this.recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
+    try {
+      const recognition = new SpeechRec();
+      this.activeRecognition = recognition;
+
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.lang = lang === 'ml' ? 'ml-IN' : 'en-IN';
+
+      let receivedResult = false;
+
+      recognition.onresult = (event: any) => {
+        receivedResult = true;
+        const transcript = event.results?.[0]?.[0]?.transcript?.trim();
         if (transcript) {
           onResult(transcript);
         }
       };
 
-      this.recognition.onerror = (event: any) => {
-        onError(event.error || 'Speech recognition error.');
+      recognition.onerror = (event: any) => {
+        const errType = event.error;
+        let userMessage = 'Speech recognition error.';
+
+        if (errType === 'not-allowed' || errType === 'service-not-allowed') {
+          userMessage =
+            lang === 'ml'
+              ? 'മൈക്രോഫോൺ അനുമതി ലഭ്യമായില്ല. ദയവായി മൈക്ക് പെർമിഷൻ നൽകുക.'
+              : 'Microphone access was denied or unavailable in this window.';
+        } else if (errType === 'no-speech') {
+          userMessage =
+            lang === 'ml'
+              ? 'ശബ്ദം തിരിച്ചറിഞ്ഞില്ല. വീണ്ടും സംസാരിക്കുക.'
+              : 'No speech was detected. Please try speaking again.';
+        } else if (errType === 'network') {
+          userMessage =
+            lang === 'ml'
+              ? 'നെറ്റ്‌വർക്ക് കണക്ഷൻ പരിശോധിക്കുക.'
+              : 'Speech recognition network error.';
+        } else if (errType === 'audio-capture') {
+          userMessage =
+            lang === 'ml'
+              ? 'മൈക്രോഫോൺ കണ്ടെത്താനായില്ല.'
+              : 'No microphone was found on this device.';
+        }
+
+        onError(userMessage);
       };
 
-      this.recognition.onend = () => {
+      recognition.onend = () => {
+        if (this.activeRecognition === recognition) {
+          this.activeRecognition = null;
+        }
         if (onEnd) onEnd();
       };
 
-      this.recognition.start();
+      recognition.start();
       return true;
     } catch (err: any) {
-      onError(err.message || 'Unable to start microphone.');
+      this.activeRecognition = null;
+      const msg = err?.message || 'Unable to start microphone.';
+      onError(msg);
       return false;
     }
   }
 
   public stopListening(): void {
-    if (this.recognition) {
+    if (this.activeRecognition) {
       try {
-        this.recognition.stop();
+        this.activeRecognition.stop();
       } catch {
-        // Ignore
+        try {
+          this.activeRecognition.abort();
+        } catch {
+          // Ignore
+        }
       }
+      this.activeRecognition = null;
     }
   }
 }

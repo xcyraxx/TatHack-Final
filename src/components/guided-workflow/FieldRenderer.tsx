@@ -132,51 +132,58 @@ export const FieldRenderer: React.FC<Props> = ({
           field.type === 'tel' ||
           field.type === 'date' ||
           field.type === 'number') && (
-          <div className="km-field">
-            <input
-              ref={inputRef}
-              id={field.id}
-              className="km-control"
-              type={field.type}
-              value={field.type === 'date' ? normalizeDateToYMD(value) : (value ?? '')}
-              onChange={(e) => {
-                const rawVal = e.target.value;
-                if (field.type === 'date') {
-                  onChange(normalizeDateToYMD(rawVal) || rawVal);
-                } else {
-                  onChange(rawVal);
-                }
-              }}
-              placeholder={field.placeholder || ''}
-              aria-labelledby={`label-${field.id}`}
-              aria-describedby={describedBy}
-              aria-required={field.required}
-              aria-invalid={Boolean(error)}
-            />
+          <>
+            <div className="km-field">
+              <input
+                ref={inputRef}
+                id={field.id}
+                className="km-control"
+                type={field.type}
+                value={field.type === 'date' ? normalizeDateToYMD(value) : (value ?? '')}
+                onChange={(e) => {
+                  const rawVal = e.target.value;
+                  if (field.type === 'date') {
+                    onChange(normalizeDateToYMD(rawVal) || rawVal);
+                  } else {
+                    onChange(rawVal);
+                  }
+                }}
+                placeholder={field.placeholder || ''}
+                aria-labelledby={`label-${field.id}`}
+                aria-describedby={describedBy}
+                aria-required={field.required}
+                aria-invalid={Boolean(error)}
+              />
 
-            {speechService.isRecognitionSupported() && field.type !== 'date' && (
-              <button
-                type="button"
-                className={`km-btn km-btn--secondary km-btn--icon km-voice-btn${
-                  isListening ? ' km-voice-btn--on' : ''
-                }`}
-                onClick={handleVoiceDictation}
-                aria-pressed={isListening}
-                aria-label={
-                  isListening
-                    ? language === 'ml'
-                      ? 'വോയ്‌സ് റെക്കോർഡിംഗ് നിർത്തുക'
-                      : 'Stop voice dictation'
-                    : language === 'ml'
-                      ? 'സംസാരിച്ച് ഉത്തരം നൽകുക'
-                      : 'Dictate answer with voice'
-                }
-                title={language === 'ml' ? 'സംസാരിച്ച് നൽകുക' : 'Dictate with voice'}
-              >
-                {isListening ? <MicOff size={18} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
-              </button>
+              {speechService.isRecognitionSupported() && field.type !== 'date' && (
+                <button
+                  type="button"
+                  className={`km-btn km-btn--secondary km-btn--icon km-voice-btn${
+                    isListening ? ' km-voice-btn--on' : ''
+                  }`}
+                  onClick={handleVoiceDictation}
+                  aria-pressed={isListening}
+                  aria-label={
+                    isListening
+                      ? language === 'ml'
+                        ? 'വോയ്‌സ് റെക്കോർഡിംഗ് നിർത്തുക'
+                        : 'Stop voice dictation'
+                      : language === 'ml'
+                        ? 'സംസാരിച്ച് ഉത്തരം നൽകുക'
+                        : 'Dictate answer with voice'
+                  }
+                  title={language === 'ml' ? 'സംസാരിച്ച് നൽകുക' : 'Dictate with voice'}
+                >
+                  {isListening ? <MicOff size={18} aria-hidden="true" /> : <Mic size={18} aria-hidden="true" />}
+                </button>
+              )}
+            </div>
+            {isListening && (
+              <p className="km-voice-status" role="status" style={{ marginTop: '0.35rem' }}>
+                {language === 'ml' ? 'സംസാരിക്കൂ…' : 'Listening…'}
+              </p>
             )}
-          </div>
+          </>
         )}
 
         {field.type === 'textarea' && (
