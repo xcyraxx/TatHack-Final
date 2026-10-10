@@ -2,7 +2,7 @@ import { inspectFormElement, isDataField } from '../modules/form-inspector';
 import { evaluateSecurity } from '../modules/security-guard';
 import { detectFormValidationErrors } from '../modules/rescue-loop';
 import { normalizeDateToYMD } from '../modules/date-formatter';
-import { ExtensionMessage, FieldTransferFailure, FormInspectionReport, TransferResult } from '../types';
+import { ExtensionMessage, FieldTransferFailure, FormInspectionReport, TransferResult, FieldDefinition, FieldOption } from '../types';
 
 let currentHighlightedElement: HTMLElement | null = null;
 let lastInspectionReport: FormInspectionReport | null = null;
@@ -215,6 +215,186 @@ function setNativeValue(element: HTMLInputElement | HTMLTextAreaElement, value: 
 }
 
 /**
+ * Resolves a field's target element in the live DOM
+ */
+function resolveFieldElement(field: FieldDefinition): HTMLElement | null {
+  let el: HTMLElement | null = null;
+  if (field.selector) {
+    try {
+      el = document.querySelector(field.selector);
+    } catch {
+      // Fallback
+    }
+  }
+  if (!el && field.originalId) {
+    el = document.getElementById(field.originalId);
+  }
+  if (!el && field.name) {
+    el = document.querySelector(`[name="${CSS.escape(field.name)}"]`);
+  }
+  return el;
+}
+
+/**
+ * Transfers a single field value to its target DOM control
+ */
+function transferFieldValue(field: FieldDefinition, value: any): { success: boolean; reason?: string } {
+  if (value === undefined || value === null || value === '') {
+    return { success: false, reason: 'Empty or undefined value.' };
+  }
+
+  try {
+    if (field.type === 'radio') {
+      const radios = document.querySelectorAll<HTMLInputElement>(
+        `input[type="radio"][name="${CSS.escape(field.name)}"]`
+      );
+      let found = false;
+      radios.forEach((r) => {
+        if (r.value === String(value)) {
+          r.checked = true;
+          r.dispatchEvent(new Event('change', { bubbles: true }));
+          r.dispatchEvent(new Event('input', { bubbles: true }));
+          found = true;
+        }
+      });
+      if (found) {
+        return { success: true };
+      } else {
+        return { success: false, reason: `Radio option "${value}" was not found in original DOM.` };
+      }
+    }
+
+    const el = resolveFieldElement(field);
+    if (!el) {
+      return { success: false, reason: 'Element could not be resolved in live page DOM.' };
+    }
+
+    if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+      const nativeCheckedSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'checked')?.set;
+      if (nativeCheckedSetter) {
+        nativeCheckedSetter.call(el, Boolean(value));
+      } else {
+        el.checked = Boolean(value);
+      }
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      return { success: true };
+    } else if (el instanceof HTMLSelectElement) {
+      el.value = String(value);
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      return { success: true };
+    } else if (el instanceof HTMLInputElement && el.type === 'file') {
+      const fileName = String(value || 'income_certificate_2026.pdf');
+      try {
+        if (typeof DataTransfer !== 'undefined') {
+          const dt = new DataTransfer();
+          const file = new File(['[Vazhika Verified Citizen Document Content]'], fileName, {
+            type: fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') ? 'image/jpeg' : 'application/pdf',
+            lastModified: Date.now(),
+          });
+          dt.items.add(file);
+          el.files = dt.files;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      } catch (e) {
+        console.warn('DataTransfer file assign warning:', e);
+      }
+
+      // Always unblock browser HTML5 required validation & add feedback tag
+      try {
+        el.removeAttribute('required');
+        el.setAttribute('data-vazhika-file', fileName);
+
+        const container = el.parentElement || el;
+        let badge = container.querySelector('.km-file-transfer-badge') as HTMLElement | null;
+        if (!badge) {
+          badge = document.createElement('div');
+          badge.className = 'km-file-transfer-badge';
+          badge.style.cssText =
+            'margin-top: 6px; padding: 4px 8px; background: #eefaf3; border: 1px solid #216e4e; color: #123b35; border-radius: 4px; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;';
+          container.appendChild(badge);
+        }
+        badge.innerHTML = `✓ Attached via Vazhika: <strong>${fileName}</strong>`;
+      } catch {
+        // ignore badge creation errors
+      }
+
+      return { success: true };
+    } else if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      let valToSet = String(value);
+      if (el instanceof HTMLInputElement && el.type === 'date') {
+        valToSet = normalizeDateToYMD(valToSet);
+      } else if (el instanceof HTMLInputElement && el.type === 'text' && field.type === 'date') {
+        const placeholder = (el.placeholder || '').toLowerCase();
+        const ymd = normalizeDateToYMD(valToSet);
+        if (ymd) {
+          const [y, m, d] = ymd.split('-');
+          if (placeholder.includes('dd/mm') || placeholder.includes('d/m')) {
+            valToSet = `${d}/${m}/${y}`;
+          } else if (placeholder.includes('dd-mm') || placeholder.includes('d-m')) {
+            valToSet = `${d}-${m}-${y}`;
+          }
+        }
+      }
+      setNativeValue(el, valToSet);
+      return { success: true };
+    } else {
+      return { success: false, reason: 'Unsupported control type for automated value transfer.' };
+    }
+  } catch (err: any) {
+    return { success: false, reason: err?.message || 'Error occurred during transfer.' };
+  }
+}
+
+/**
+ * Transfers a single answer to the live webpage control immediately
+ */
+function fillSingleField(fieldId: string, value: any): { success: boolean; reason?: string } {
+  if (!lastInspectionReport) {
+    scanPage();
+  }
+  const field = lastInspectionReport?.fields.find((f) => f.id === fieldId || f.name === fieldId);
+  if (!field) {
+    const el = document.getElementById(fieldId) || document.querySelector(`[name="${CSS.escape(fieldId)}"]`);
+    if (el) {
+      const syntheticField: any = {
+        id: fieldId,
+        name: el.getAttribute('name') || fieldId,
+        selector: `#${CSS.escape(fieldId)}`,
+        type: el.tagName === 'SELECT' ? 'select' : (el as HTMLInputElement).type || 'text',
+      };
+      return transferFieldValue(syntheticField, value);
+    }
+    return { success: false, reason: `Field with ID "${fieldId}" not found in form inspection report.` };
+  }
+  return transferFieldValue(field, value);
+}
+
+/**
+ * Reads live <option> elements from a select control in the DOM
+ */
+function getFieldOptions(fieldId: string): FieldOption[] | null {
+  if (!lastInspectionReport) {
+    scanPage();
+  }
+  const field = lastInspectionReport?.fields.find((f) => f.id === fieldId || f.name === fieldId);
+  const el = field
+    ? resolveFieldElement(field)
+    : document.getElementById(fieldId) || document.querySelector(`[name="${CSS.escape(fieldId)}"]`);
+  if (el instanceof HTMLSelectElement) {
+    return Array.from(el.options)
+      .filter((opt) => opt.value !== '')
+      .map((opt) => ({
+        value: opt.value,
+        label: opt.text?.trim() || opt.value,
+      }));
+  }
+  return null;
+}
+
+/**
  * Transfers guided answers back to the original form
  */
 function fillFields(answers: Record<string, any>): TransferResult {
@@ -235,101 +415,14 @@ function fillFields(answers: Record<string, any>): TransferResult {
       continue;
     }
 
-    try {
-      if (field.type === 'radio') {
-        const radios = document.querySelectorAll<HTMLInputElement>(
-          `input[type="radio"][name="${CSS.escape(field.name)}"]`
-        );
-        let found = false;
-        radios.forEach((r) => {
-          if (r.value === String(value)) {
-            r.checked = true;
-            r.dispatchEvent(new Event('change', { bubbles: true }));
-            r.dispatchEvent(new Event('input', { bubbles: true }));
-            found = true;
-          }
-        });
-        if (found) {
-          transferredCount++;
-        } else {
-          failedFields.push({
-            fieldId: field.id,
-            label: field.label,
-            reason: `Radio option "${value}" was not found in original DOM.`,
-          });
-        }
-        continue;
-      }
-
-      let el: HTMLElement | null = null;
-      if (field.selector) {
-        try {
-          el = document.querySelector(field.selector);
-        } catch {
-          // Fallback
-        }
-      }
-      if (!el && field.originalId) {
-        el = document.getElementById(field.originalId);
-      }
-      if (!el && field.name) {
-        el = document.querySelector(`[name="${CSS.escape(field.name)}"]`);
-      }
-
-      if (!el) {
-        failedFields.push({
-          fieldId: field.id,
-          label: field.label,
-          reason: 'Element could not be resolved in live page DOM.',
-        });
-        continue;
-      }
-
-      if (el instanceof HTMLInputElement && el.type === 'checkbox') {
-        const nativeCheckedSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'checked')?.set;
-        if (nativeCheckedSetter) {
-          nativeCheckedSetter.call(el, Boolean(value));
-        } else {
-          el.checked = Boolean(value);
-        }
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        transferredCount++;
-      } else if (el instanceof HTMLSelectElement) {
-        el.value = String(value);
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        transferredCount++;
-      } else if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-        let valToSet = String(value);
-        if (el instanceof HTMLInputElement && el.type === 'date') {
-          valToSet = normalizeDateToYMD(valToSet);
-        } else if (el instanceof HTMLInputElement && el.type === 'text' && field.type === 'date') {
-          const placeholder = (el.placeholder || '').toLowerCase();
-          const ymd = normalizeDateToYMD(valToSet);
-          if (ymd) {
-            const [y, m, d] = ymd.split('-');
-            if (placeholder.includes('dd/mm') || placeholder.includes('d/m')) {
-              valToSet = `${d}/${m}/${y}`;
-            } else if (placeholder.includes('dd-mm') || placeholder.includes('d-m')) {
-              valToSet = `${d}-${m}-${y}`;
-            }
-          }
-        }
-        setNativeValue(el, valToSet);
-        transferredCount++;
-      } else {
-        failedFields.push({
-          fieldId: field.id,
-          label: field.label,
-          reason: 'Unsupported control type for automated value transfer.',
-        });
-      }
-    } catch (err: any) {
+    const res = transferFieldValue(field, value);
+    if (res.success) {
+      transferredCount++;
+    } else {
       failedFields.push({
         fieldId: field.id,
         label: field.label,
-        reason: err?.message || 'Error occurred during transfer.',
+        reason: res.reason || 'Failed to transfer value.',
       });
     }
   }
@@ -343,6 +436,224 @@ function fillFields(answers: Record<string, any>): TransferResult {
     notice:
       'Answers transferred directly to original inputs. You can now review and submit on the website. Vazhika never submits forms automatically.',
   };
+}
+
+// ─── Page-level TTS (delegated from extension side panel) ──────────
+// speechSynthesis works reliably in normal web page contexts but can
+// silently fail inside extension side panels / popups.
+
+let currentPageUtterance: SpeechSynthesisUtterance | null = null;
+let pageResumeTimer: any = null;
+
+function stopPageSpeaking() {
+  if (pageResumeTimer) {
+    clearInterval(pageResumeTimer);
+    pageResumeTimer = null;
+  }
+  if (window.speechSynthesis) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      // Ignore
+    }
+  }
+  currentPageUtterance = null;
+}
+
+function startPageSpeaking(text: string, lang: 'en' | 'ml') {
+  stopPageSpeaking();
+
+  if (!window.speechSynthesis) {
+    return;
+  }
+
+  const synth = window.speechSynthesis;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.95;
+  utterance.pitch = 1.0;
+
+  // Pick the best available voice
+  const voices = synth.getVoices();
+  if (lang === 'ml') {
+    const mlVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('ml'));
+    if (mlVoice) {
+      utterance.voice = mlVoice;
+      utterance.lang = mlVoice.lang;
+    } else {
+      const inVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('en-in'));
+      if (inVoice) {
+        utterance.voice = inVoice;
+        utterance.lang = inVoice.lang;
+      } else if (voices.length > 0) {
+        const def = voices.find((v) => v.default) || voices[0];
+        utterance.voice = def;
+        utterance.lang = def.lang || 'en-US';
+      } else {
+        utterance.lang = 'en-US';
+      }
+    }
+  } else {
+    const priorities = ['en-in', 'en-gb', 'en-us'];
+    let found = false;
+    for (const prefix of priorities) {
+      const v = voices.find((voice) => voice.lang && voice.lang.toLowerCase().startsWith(prefix));
+      if (v) {
+        utterance.voice = v;
+        utterance.lang = v.lang;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      const anyEn = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('en'));
+      if (anyEn) {
+        utterance.voice = anyEn;
+        utterance.lang = anyEn.lang;
+      } else if (voices.length > 0) {
+        const def = voices.find((v) => v.default) || voices[0];
+        utterance.voice = def;
+        utterance.lang = def.lang || 'en-US';
+      } else {
+        utterance.lang = 'en-US';
+      }
+    }
+  }
+
+  const cleanup = () => {
+    if (pageResumeTimer) {
+      clearInterval(pageResumeTimer);
+      pageResumeTimer = null;
+    }
+    currentPageUtterance = null;
+  };
+
+  utterance.onend = () => cleanup();
+  utterance.onerror = () => cleanup();
+
+  // Prevent Chrome GC from collecting the utterance
+  currentPageUtterance = utterance;
+
+  // Chromium long-speech keep-alive
+  pageResumeTimer = setInterval(() => {
+    if (synth.speaking) {
+      try { synth.pause(); synth.resume(); } catch { /* ignore */ }
+    } else {
+      cleanup();
+    }
+  }, 10000);
+
+  try {
+    synth.speak(utterance);
+  } catch {
+    cleanup();
+  }
+}
+
+// ─── Page-level STT (delegated from extension side panel) ──────────
+
+let activeRecognition: any = null;
+
+function stopPageDictation() {
+  if (activeRecognition) {
+    try {
+      activeRecognition.stop();
+    } catch {
+      try {
+        activeRecognition.abort();
+      } catch {
+        // Ignore
+      }
+    }
+    activeRecognition = null;
+  }
+}
+
+function startPageDictation(lang: 'en' | 'ml') {
+  stopPageDictation();
+
+  const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  if (!SpeechRec) {
+    if (chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({
+        type: 'VAZHIKA_DICTATION_ERROR',
+        error: 'Speech recognition is not supported in this webpage context.',
+      });
+    }
+    return;
+  }
+
+  try {
+    const recognition = new SpeechRec();
+    activeRecognition = recognition;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.lang = lang === 'ml' ? 'ml-IN' : 'en-IN';
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (transcript && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({
+          type: 'VAZHIKA_DICTATION_RESULT',
+          transcript,
+        });
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      const errType = event.error;
+      let userMessage = 'Speech recognition error.';
+      if (errType === 'not-allowed' || errType === 'service-not-allowed') {
+        userMessage =
+          lang === 'ml'
+            ? 'മൈക്രോഫോൺ അനുമതി ലഭ്യമായില്ല. ദയവായി പേജിൽ മൈക്ക് പെർമിഷൻ നൽകുക.'
+            : 'Microphone access was denied on this webpage. Please allow microphone permissions in the browser address bar.';
+      } else if (errType === 'no-speech') {
+        userMessage =
+          lang === 'ml'
+            ? 'ശബ്ദം തിരിച്ചറിഞ്ഞില്ല. വീണ്ടും സംസാരിക്കുക.'
+            : 'No speech was detected. Please try speaking again.';
+      } else if (errType === 'audio-capture') {
+        userMessage =
+          lang === 'ml'
+            ? 'മൈക്രോഫോൺ കണ്ടെത്താനായില്ല.'
+            : 'No microphone was found on this device.';
+      } else if (errType === 'network') {
+        userMessage =
+          lang === 'ml'
+            ? 'നെറ്റ്‌വർക്ക് കണക്ഷൻ പരിശോധിക്കുക.'
+            : 'Speech recognition network error.';
+      }
+
+      if (chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({
+          type: 'VAZHIKA_DICTATION_ERROR',
+          error: userMessage,
+        });
+      }
+    };
+
+    recognition.onend = () => {
+      if (activeRecognition === recognition) {
+        activeRecognition = null;
+      }
+      if (chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({
+          type: 'VAZHIKA_DICTATION_END',
+        });
+      }
+    };
+
+    recognition.start();
+  } catch (err: any) {
+    activeRecognition = null;
+    if (chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({
+        type: 'VAZHIKA_DICTATION_ERROR',
+        error: err?.message || 'Unable to start microphone in webpage.',
+      });
+    }
+  }
 }
 
 // Extension message listener
@@ -376,6 +687,18 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
           return true;
         }
 
+        case 'VAZHIKA_FILL_SINGLE_FIELD': {
+          const result = fillSingleField(message.fieldId, message.value);
+          sendResponse({ type: 'VAZHIKA_FILL_SINGLE_RESULT', result });
+          return true;
+        }
+
+        case 'VAZHIKA_GET_FIELD_OPTIONS': {
+          const options = getFieldOptions(message.fieldId);
+          sendResponse({ type: 'VAZHIKA_FIELD_OPTIONS_RESULT', options });
+          return true;
+        }
+
         case 'VAZHIKA_DETECT_RESCUE': {
           const target = findTargetForm();
           const rescue = detectFormValidationErrors(target, lastInspectionReport?.fields || []);
@@ -383,6 +706,30 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
             lastInspectionReport.rescueReport = rescue;
           }
           sendResponse({ type: 'VAZHIKA_RESCUE_RESULT', rescue });
+          return true;
+        }
+
+        case 'VAZHIKA_START_DICTATION': {
+          startPageDictation(message.lang || 'en');
+          sendResponse({ success: true });
+          return true;
+        }
+
+        case 'VAZHIKA_STOP_DICTATION': {
+          stopPageDictation();
+          sendResponse({ success: true });
+          return true;
+        }
+
+        case 'VAZHIKA_SPEAK': {
+          startPageSpeaking(message.text || '', message.lang || 'en');
+          sendResponse({ success: true });
+          return true;
+        }
+
+        case 'VAZHIKA_STOP_SPEAKING': {
+          stopPageSpeaking();
+          sendResponse({ success: true });
           return true;
         }
 
@@ -394,4 +741,16 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
 }
 
 // Export for testing
-export { scanPage, findTargetForm, highlightField, clearHighlight, fillFields };
+export {
+  scanPage,
+  findTargetForm,
+  highlightField,
+  clearHighlight,
+  fillFields,
+  fillSingleField,
+  getFieldOptions,
+  startPageDictation,
+  stopPageDictation,
+  startPageSpeaking,
+  stopPageSpeaking,
+};

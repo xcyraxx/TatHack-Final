@@ -129,6 +129,10 @@
       <p class="desc">
         This form contains real-world accessibility defects: missing labels, asterisk-only required indicators, unsemantic input types, un-grouped radio buttons, and confusing terminology.
       </p>
+      
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.88rem; color: #166534;">
+        <strong>Mandatory Pre-requisite:</strong> Applicants must provide their official Revenue Income Certificate, Aadhaar Card proof, and Family Ration Card for automated e-District verification.
+      </div>
 
       <form id="public-service-form" action="#">
         <!-- Defect 1: Missing label; placeholder used as only hint -->
@@ -194,6 +198,33 @@
           ></textarea>
         </div>
 
+        <!-- Cascading Prerequisite Field 1: PIN Code -->
+        <div class="form-group">
+          <label class="label-text" for="pincode">
+            Postal PIN Code <span style="color: #dc2626;">*</span>
+          </label>
+          <input
+            id="pincode"
+            name="pincode"
+            type="text"
+            maxlength="6"
+            placeholder="6-digit PIN code (e.g. 682001 or 695001)"
+          />
+          <div style="font-size: 0.78rem; color: #64748b; margin-top: 4px;">
+            ℹ️ Entering a valid 6-digit PIN code triggers a background lookup that populates the District dropdown below.
+          </div>
+        </div>
+
+        <!-- Cascading Dependent Field 2: District (Initially disabled with prompt) -->
+        <div class="form-group">
+          <label class="label-text" for="district">
+            Applicant District <span style="color: #dc2626;">*</span>
+          </label>
+          <select id="district" name="district" disabled>
+            <option value="">-- Enter PIN Code first to load districts --</option>
+          </select>
+        </div>
+
         <!-- Defect 7: Radio buttons without <fieldset> and <legend> -->
         <div class="form-group">
           <span style="font-size: 0.8rem; color: #dc2626; font-weight: 600;">[Defect: Radio group without &lt;fieldset&gt; / &lt;legend&gt;]</span>
@@ -212,6 +243,31 @@
               <span>Person with Disability (Divyangjan)</span>
             </label>
           </div>
+        </div>
+
+        <!-- File Upload Control (Document Requirement) -->
+        <div class="form-group">
+          <label class="label-text" for="income_cert">
+            Upload Revenue Income Certificate (PDF/JPG) <span style="color: #dc2626;">*</span>
+          </label>
+          <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <input
+              id="income_cert"
+              name="income_cert"
+              type="file"
+              accept=".pdf,.jpg,.jpeg"
+              required
+              style="flex: 1; min-width: 220px;"
+            />
+            <button
+              type="button"
+              id="btn-sample-file"
+              style="background-color: #eefaf3; color: #123b35; border: 1.5px solid #123b35; padding: 0.65rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap;"
+            >
+              📄 Attach Sample PDF
+            </button>
+          </div>
+          <div id="file-status" style="margin-top: 0.45rem; font-size: 0.82rem; color: #216e4e; font-weight: 600; display: none;"></div>
         </div>
 
         <!-- Defect 8: Unsupported custom widget (demonstrates honest fallback) -->

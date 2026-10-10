@@ -183,6 +183,17 @@ export type ExtensionMessage =
   | { type: 'VAZHIKA_CLEAR_HIGHLIGHT' }
   | { type: 'VAZHIKA_FILL_FIELDS'; answers: Record<string, any> }
   | { type: 'VAZHIKA_FILL_RESULT'; result: TransferResult }
+  | { type: 'VAZHIKA_FILL_SINGLE_FIELD'; fieldId: string; value: any }
+  | { type: 'VAZHIKA_FILL_SINGLE_RESULT'; result: { success: boolean; reason?: string } }
+  | { type: 'VAZHIKA_GET_FIELD_OPTIONS'; fieldId: string }
+  | { type: 'VAZHIKA_FIELD_OPTIONS_RESULT'; options: FieldOption[] | null }
   | { type: 'VAZHIKA_DETECT_RESCUE' }
   | { type: 'VAZHIKA_RESCUE_RESULT'; rescue: RescueReport }
-  | { type: 'VAZHIKA_OPEN_SIDEPANEL'; tabId?: number };
+  | { type: 'VAZHIKA_OPEN_SIDEPANEL'; tabId?: number }
+  | { type: 'VAZHIKA_START_DICTATION'; lang: 'en' | 'ml' }
+  | { type: 'VAZHIKA_STOP_DICTATION' }
+  | { type: 'VAZHIKA_DICTATION_RESULT'; transcript: string }
+  | { type: 'VAZHIKA_DICTATION_ERROR'; error: string }
+  | { type: 'VAZHIKA_DICTATION_END' }
+  | { type: 'VAZHIKA_SPEAK'; text: string; lang: 'en' | 'ml' }
+  | { type: 'VAZHIKA_STOP_SPEAKING' };

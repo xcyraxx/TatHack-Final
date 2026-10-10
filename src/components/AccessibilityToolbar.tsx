@@ -10,8 +10,14 @@ import {
   Zap,
   Trash2,
   SlidersHorizontal,
+  Download,
+  CheckCircle,
+  Loader2,
+  Shield,
 } from 'lucide-react';
+import { speechService } from '../modules/speech-service';
 import { useAccessibility, TextSize } from '../modules/accessibility-controls/AccessibilityProvider';
+import { civicWallet } from '../modules/civic-wallet';
 
 interface Props {
   onClearDraft?: () => void;
@@ -39,6 +45,42 @@ export const AccessibilityToolbar: React.FC<Props> = ({ onClearDraft, compact = 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [revealed, setRevealed] = useState(false);
+
+  // Neural TTS State
+  const [neuralReady, setNeuralReady] = useState(speechService.isNeuralModelReady);
+  const [neuralDownloading, setNeuralDownloading] = useState(speechService.isNeuralModelDownloading);
+  const [neuralProgress, setNeuralProgress] = useState(0);
+
+  useEffect(() => {
+    // Check initial state
+    setNeuralReady(speechService.isNeuralModelReady);
+    setNeuralDownloading(speechService.isNeuralModelDownloading);
+
+    speechService.onNeuralProgress((progress) => {
+      setNeuralProgress(progress);
+      if (progress >= 100) {
+        setNeuralReady(true);
+        setNeuralDownloading(false);
+      }
+    });
+  }, []);
+
+  const handleDownloadNeural = async () => {
+    if (neuralReady || neuralDownloading) return;
+    setNeuralDownloading(true);
+    setNeuralProgress(0);
+    announce(ml ? 'ഉയർന്ന നിലവാരമുള്ള ശബ്ദം ഡൗൺലോഡ് ചെയ്യുന്നു' : 'Downloading high-quality voice');
+    try {
+      await speechService.downloadNeuralModel();
+      setNeuralReady(true);
+      announce(ml ? 'ശബ്ദം തയ്യാറാണ്' : 'High-quality voice ready');
+    } catch (e) {
+      console.error(e);
+      announce(ml ? 'ഡൗൺലോഡ് പരാജയപ്പെട്ടു' : 'Download failed');
+    } finally {
+      setNeuralDownloading(false);
+    }
+  };
 
   // Edge-proximity reveal: watch mousemove on the parent container
   useEffect(() => {
@@ -165,6 +207,36 @@ export const AccessibilityToolbar: React.FC<Props> = ({ onClearDraft, compact = 
           {voiceEnabled ? <Volume2 /> : <VolumeX />}
         </button>
 
+        {voiceEnabled && ml && (
+          <button
+            type="button"
+            className={`km-toggle ${neuralReady ? 'km-toggle--success' : ''}`}
+            onClick={handleDownloadNeural}
+            disabled={neuralReady || neuralDownloading}
+            aria-label="Download Offline Voice"
+            title="Offline Voice (40 MB)"
+          >
+            {neuralReady ? (
+              <CheckCircle size={14} className="km-text-success" />
+            ) : neuralDownloading ? (
+              <Loader2 size={14} className="km-spin" />
+            ) : (
+              <Download size={14} />
+            )}
+          </button>
+        )}
+
+        {/* Civic Wallet — compact */}
+        <button
+          type="button"
+          className="km-toggle"
+          onClick={() => civicWallet.openModal()}
+          aria-label={ml ? 'സിവിക് വാലറ്റ്' : 'Civic Wallet'}
+          title={ml ? 'സിവിക് വാലറ്റ് (Civic Wallet)' : 'Civic Wallet'}
+        >
+          <Shield />
+        </button>
+
         {/* Dark pill — compact */}
         <div className="km-dark-pill-wrapper" style={{ marginLeft: 'auto' }}>
           <span className="km-dark-pill-icon" aria-hidden="true">
@@ -223,7 +295,7 @@ export const AccessibilityToolbar: React.FC<Props> = ({ onClearDraft, compact = 
           </button>
         </div>
 
-        {/* Voice */}
+                {/* Voice */}
         <div className="km-toolbar__group">
           <button type="button"
             className={`km-toggle${voiceEnabled ? ' km-toggle--on' : ''}`}
@@ -234,6 +306,31 @@ export const AccessibilityToolbar: React.FC<Props> = ({ onClearDraft, compact = 
             {voiceEnabled ? <Volume2 /> : <VolumeX />}
             <span aria-hidden="true">{ml ? 'ശബ്ദം' : 'Voice'}</span>
           </button>
+          
+          {voiceEnabled && ml && (
+            <button
+              type="button"
+              className={`km-toggle ${neuralReady ? 'km-toggle--success' : ''}`}
+              onClick={handleDownloadNeural}
+              disabled={neuralReady || neuralDownloading}
+              aria-label={ml ? 'ഓഫ്‌ലൈൻ ശബ്ദം ഡൗൺലോഡ് ചെയ്യുക' : 'Download Offline Voice'}
+              title={ml ? 'ഓഫ്‌ലൈൻ ശബ്ദം (40 MB)' : 'Offline Voice (40 MB)'}
+            >
+              {neuralReady ? (
+                <CheckCircle size={16} className="km-text-success" />
+              ) : neuralDownloading ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Loader2 size={16} className="km-spin" />
+                  <span style={{ fontSize: '10px' }}>{Math.round(neuralProgress)}%</span>
+                </div>
+              ) : (
+                <Download size={16} />
+              )}
+              <span aria-hidden="true" style={{ fontSize: '10px' }}>
+                {neuralReady ? 'Ready' : 'HQ Voice'}
+              </span>
+            </button>
+          )}
         </div>
 
         <div className="km-toolbar__divider" aria-hidden="true" />
@@ -267,21 +364,35 @@ export const AccessibilityToolbar: React.FC<Props> = ({ onClearDraft, compact = 
           </span>
         </div>
 
-        {/* Clear draft */}
-        {onClearDraft && (
-          <div className="km-toolbar__end">
-            <button type="button" className="km-toggle"
+        {/* Wallet & Clear draft */}
+        <div className="km-toolbar__end" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <button
+            type="button"
+            className="km-toggle"
+            onClick={() => civicWallet.openModal()}
+            aria-label={ml ? 'സിവിക് വാലറ്റ്' : 'Civic Wallet'}
+            title={ml ? 'സിവിക് വാലറ്റ് (Civic Wallet)' : 'Civic Wallet'}
+          >
+            <Shield />
+            <span aria-hidden="true">{ml ? 'വാലറ്റ്' : 'Wallet'}</span>
+          </button>
+
+          {onClearDraft && (
+            <button
+              type="button"
+              className="km-toggle"
               onClick={() => {
                 if (window.confirm(ml ? 'സേവ് ചെയ്ത വിവരങ്ങൾ ഒഴിവാക്കണോ?' : 'Clear all saved answers?')) {
                   onClearDraft();
                 }
               }}
-              aria-label={ml ? 'ഡ്രാഫ്റ്റ് മായ്ക്കുക' : 'Clear saved draft'}>
+              aria-label={ml ? 'ഡ്രാഫ്റ്റ് മായ്ക്കുക' : 'Clear saved draft'}
+            >
               <Trash2 />
               <span aria-hidden="true">{ml ? 'ഡ്രാഫ്റ്റ്' : 'Clear'}</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Peek handle — always visible at bottom edge, invites hover and click */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FormInspectionReport, TransferResult } from '../../types';
+import { FormInspectionReport, TransferResult, FieldDefinition, FieldOption } from '../../types';
 import { FieldRenderer } from './FieldRenderer';
 import { ReviewScreen } from '../review-screen/ReviewScreen';
 import { CompletionScreen } from '../review-screen/CompletionScreen';
@@ -8,14 +8,19 @@ import { saveDraft, loadDraft, clearDraft } from '../../modules/draft-storage';
 import { useAccessibility } from '../../modules/accessibility-controls/AccessibilityProvider';
 import { speechService } from '../../modules/speech-service';
 import { VazhikaMark } from '../VazhikaMark';
-import { ArrowLeft, ArrowRight, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, X, FileCheck2, Shield } from 'lucide-react';
 import { normalizeDateToYMD } from '../../modules/date-formatter';
+import { detectDocumentRequirements, ChecklistDocument } from '../../modules/document-checklist';
+import { DocumentChecklistScreen } from '../document-checklist/DocumentChecklistScreen';
+import { civicWallet } from '../../modules/civic-wallet';
 
 interface Props {
   report: FormInspectionReport;
   onHighlightField?: (selector: string, fieldId: string) => void;
   onClearHighlight?: () => void;
   onTransferAnswers: (answers: Record<string, any>) => Promise<TransferResult>;
+  onSyncSingleField?: (field: FieldDefinition, value: any) => Promise<void> | void;
+  onRefreshFieldOptions?: (field: FieldDefinition) => Promise<FieldOption[] | null>;
   onExit?: () => void;
   initialFieldId?: string;
 }
@@ -25,11 +30,20 @@ export const GuidedWorkflow: React.FC<Props> = ({
   onHighlightField,
   onClearHighlight,
   onTransferAnswers,
+  onSyncSingleField,
+  onRefreshFieldOptions,
   onExit,
   initialFieldId,
 }) => {
   const { fields, formId, formTitle } = report;
   const { language, voiceEnabled, announce } = useAccessibility();
+
+  const [detectedDocuments] = useState<ChecklistDocument[]>(() =>
+    detectDocumentRequirements(null, report)
+  );
+  const [showChecklist, setShowChecklist] = useState<boolean>(
+    () => !initialFieldId && detectedDocuments.length > 0
+  );
 
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(() => {
     if (initialFieldId) {
@@ -54,6 +68,7 @@ export const GuidedWorkflow: React.FC<Props> = ({
   const [isTransferring, setIsTransferring] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
   const [lastSavedTime, setLastSavedTime] = useState<string>('just now');
+  const [syncedFieldIds, setSyncedFieldIds] = useState<Set<string>>(new Set());
 
   // Jump to field if initialFieldId changes
   useEffect(() => {
@@ -127,7 +142,7 @@ export const GuidedWorkflow: React.FC<Props> = ({
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!currentField) return;
     const currentVal = answers[currentField.id] ?? answers[currentField.name];
     const validationError = validateFieldValue(currentField, currentVal, language);
@@ -146,8 +161,33 @@ export const GuidedWorkflow: React.FC<Props> = ({
 
     setCurrentError(null);
 
+    // Live Mirroring: Sync completed field to the live page control immediately
+    if (onSyncSingleField && currentVal !== undefined && currentVal !== null && currentVal !== '') {
+      try {
+        await onSyncSingleField(currentField, currentVal);
+        setSyncedFieldIds((prev) => new Set(prev).add(currentField.id));
+      } catch (err) {
+        console.warn('Live field sync warning:', err);
+      }
+    }
+
     if (currentStepIndex < fields.length - 1) {
-      setCurrentStepIndex((prev) => prev + 1);
+      const nextIdx = currentStepIndex + 1;
+      const nextField = fields[nextIdx];
+
+      // If next field is a select dropdown, check if live page fetched new options (e.g. PIN -> District)
+      if (nextField && nextField.type === 'select' && onRefreshFieldOptions) {
+        try {
+          const freshOptions = await onRefreshFieldOptions(nextField);
+          if (freshOptions && freshOptions.length > 0) {
+            nextField.options = freshOptions;
+          }
+        } catch {
+          // Keep existing options if refresh fails
+        }
+      }
+
+      setCurrentStepIndex(nextIdx);
     } else {
       setIsReviewMode(true);
       announce('All questions completed. Welcome to the review screen.');
@@ -206,19 +246,63 @@ export const GuidedWorkflow: React.FC<Props> = ({
       <span className="km-guided__context" title={formTitle}>
         {formTitle}
       </span>
-      {onExit && (
+
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        {detectedDocuments.length > 0 && (
+          <button
+            type="button"
+            className="km-btn km-btn--quiet km-btn--sm"
+            onClick={() => setShowChecklist((v) => !v)}
+            title={language === 'ml' ? 'ആവശ്യമായ രേഖകളുടെ ചെക്ക്‌ലിസ്റ്റ്' : 'Document Checklist'}
+            style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <FileCheck2 size={14} />
+            <span>{language === 'ml' ? 'രേഖകൾ' : 'Checklist'} ({detectedDocuments.length})</span>
+          </button>
+        )}
+
         <button
           type="button"
-          className="km-btn km-btn--quiet km-btn--sm km-guided__exit"
-          onClick={onExit}
-          aria-label={language === 'ml' ? 'ഗൈഡഡ് മോഡ് വിടുക' : 'Exit guided mode'}
+          className="km-btn km-btn--quiet km-btn--sm"
+          onClick={() => civicWallet.openModal()}
+          title={language === 'ml' ? 'സിവിക് വാലറ്റ് പരിശോധിക്കുക' : 'Open Civic Wallet'}
+          style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
         >
-          <X size={15} aria-hidden="true" />
-          <span>{language === 'ml' ? 'പുറത്തേക്ക്' : 'Exit'}</span>
+          <Shield size={14} />
+          <span>{language === 'ml' ? 'വാലറ്റ്' : 'Wallet'}</span>
         </button>
-      )}
+
+        {onExit && (
+          <button
+            type="button"
+            className="km-btn km-btn--quiet km-btn--sm km-guided__exit"
+            onClick={onExit}
+            aria-label={language === 'ml' ? 'ഗൈഡഡ് മോഡ് വിടുക' : 'Exit guided mode'}
+          >
+            <X size={15} aria-hidden="true" />
+            <span>{language === 'ml' ? 'പുറത്തേക്ക്' : 'Exit'}</span>
+          </button>
+        )}
+      </div>
     </div>
   );
+
+  // Before Step 1: Pre-flight Document Checklist Screen
+  if (showChecklist && detectedDocuments.length > 0) {
+    return (
+      <div className="km-guided">
+        {topBar}
+        <div className="km-guided__body" style={{ padding: '0.5rem 0' }}>
+          <DocumentChecklistScreen
+            documents={detectedDocuments}
+            onStartWorkflow={() => setShowChecklist(false)}
+            onSkip={() => setShowChecklist(false)}
+            formTitle={formTitle}
+          />
+        </div>
+      </div>
+    );
+  }
 
   // Completion
   if (transferResult) {
@@ -276,9 +360,25 @@ export const GuidedWorkflow: React.FC<Props> = ({
               ? `ചോദ്യം ${currentStepIndex + 1} / ${fields.length}`
               : `Step ${currentStepIndex + 1} of ${fields.length}`}
           </span>
-          <span>
-            {language === 'ml' ? 'ഡ്രാഫ്റ്റ് സൂക്ഷിച്ചു' : 'Draft saved'} {lastSavedTime}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {syncedFieldIds.has(currentField?.id) && (
+              <span
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  color: 'var(--km-success, #216e4e)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                ✓ {language === 'ml' ? 'പേജുമായി സമന്വയിപ്പിച്ചു' : 'Live synced'}
+              </span>
+            )}
+            <span>
+              {language === 'ml' ? 'ഡ്രാഫ്റ്റ് സൂക്ഷിച്ചു' : 'Draft saved'} {lastSavedTime}
+            </span>
+          </div>
         </div>
         <div
           role="progressbar"
@@ -303,6 +403,7 @@ export const GuidedWorkflow: React.FC<Props> = ({
               error={currentError}
               isListening={isListening}
               onListeningChange={setIsListening}
+              onOpenWalletModal={() => civicWallet.openModal()}
             />
           </div>
         )}

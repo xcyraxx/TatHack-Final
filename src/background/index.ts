@@ -11,7 +11,7 @@ if (typeof chrome !== 'undefined' && chrome.sidePanel) {
     .catch((error) => console.log('Side panel config error:', error));
 }
 
-// Listen for messages from popup or sidepanel
+// Listen for messages from popup, sidepanel, and content scripts
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === 'VAZHIKA_OPEN_SIDEPANEL') {
@@ -23,9 +23,23 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
           console.error('Failed to open side panel:', err);
           sendResponse({ success: false, error: err.message });
         });
-        return true;
+        return true; // keep channel open for async response
       }
     }
+
+    // IMPORTANT: Dictation messages from content script need to propagate to the
+    // side panel's chrome.runtime.onMessage listener. Do NOT return false here for
+    // these message types — returning false/undefined lets Chrome continue
+    // dispatching the message to other listeners (side panel, popup).
+    if (
+      message.type === 'VAZHIKA_DICTATION_RESULT' ||
+      message.type === 'VAZHIKA_DICTATION_ERROR' ||
+      message.type === 'VAZHIKA_DICTATION_END'
+    ) {
+      // Let the message pass through to other extension pages (side panel)
+      return false;
+    }
+
     return false;
   });
 }

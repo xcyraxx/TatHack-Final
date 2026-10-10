@@ -2,9 +2,10 @@ import React, { useRef, useEffect, useState } from 'react';
 import { FieldDefinition } from '../../types';
 import { ValidationError } from '../../modules/validation-engine';
 import { useAccessibility } from '../../modules/accessibility-controls/AccessibilityProvider';
-import { Mic, MicOff, AlertCircle, Volume2, HelpCircle } from 'lucide-react';
+import { Mic, MicOff, AlertCircle, Volume2, HelpCircle, Loader2, Upload, FileText, CheckCircle2 } from 'lucide-react';
 import { speechService } from '../../modules/speech-service';
 import { normalizeDateToYMD } from '../../modules/date-formatter';
+import { CivicWalletConsentPrompt } from '../civic-wallet/CivicWalletConsentPrompt';
 
 interface Props {
   field: FieldDefinition;
@@ -13,6 +14,7 @@ interface Props {
   error?: ValidationError | null;
   onListeningChange?: (listening: boolean) => void;
   isListening?: boolean;
+  onOpenWalletModal?: () => void;
 }
 
 export const FieldRenderer: React.FC<Props> = ({
@@ -22,9 +24,17 @@ export const FieldRenderer: React.FC<Props> = ({
   error,
   onListeningChange,
   isListening = false,
+  onOpenWalletModal,
 }) => {
   const { language, announce } = useAccessibility();
   const inputRef = useRef<any>(null);
+  const [isSynthesizing, setIsSynthesizing] = useState<boolean>(speechService.isSynthesizing);
+
+  useEffect(() => {
+    return speechService.onSynthesizingChange((synth) => {
+      setIsSynthesizing(synth);
+    });
+  }, []);
 
   // Auto-focus primary input control on step change
   useEffect(() => {
@@ -111,12 +121,31 @@ export const FieldRenderer: React.FC<Props> = ({
             className="km-btn km-btn--quiet km-btn--sm km-btn--icon"
             style={{ marginLeft: 'auto' }}
             onClick={handleReadQuestion}
+            disabled={isSynthesizing}
             aria-label={
-              language === 'ml' ? 'ചോദ്യം വായിക്കുക' : 'Read this question aloud'
+              isSynthesizing
+                ? language === 'ml'
+                  ? 'ശബ്ദം തയ്യാറാക്കുന്നു...'
+                  : 'Generating speech...'
+                : language === 'ml'
+                ? 'ചോദ്യം വായിക്കുക'
+                : 'Read this question aloud'
             }
-            title={language === 'ml' ? 'ചോദ്യം വായിക്കുക' : 'Read this question aloud'}
+            title={
+              isSynthesizing
+                ? language === 'ml'
+                  ? 'ശബ്ദം തയ്യാറാക്കുന്നു...'
+                  : 'Generating speech...'
+                : language === 'ml'
+                ? 'ചോദ്യം വായിക്കുക'
+                : 'Read this question aloud'
+            }
           >
-            <Volume2 size={16} aria-hidden="true" />
+            {isSynthesizing ? (
+              <Loader2 size={16} className="km-spin" aria-hidden="true" />
+            ) : (
+              <Volume2 size={16} aria-hidden="true" />
+            )}
           </button>
         )}
       </div>
@@ -125,6 +154,14 @@ export const FieldRenderer: React.FC<Props> = ({
       <p className="km-help" id={helpId}>
         {explanationText}
       </p>
+
+      {/* Field-level Civic Wallet Consent Prompt */}
+      <CivicWalletConsentPrompt
+        field={field}
+        currentValue={value}
+        onApplyValue={(val) => onChange(val)}
+        onOpenWalletModal={onOpenWalletModal || (() => {})}
+      />
 
       <div className="km-control-area">
         {(field.type === 'text' ||
@@ -294,6 +331,115 @@ export const FieldRenderer: React.FC<Props> = ({
               <span className="km-choice__text">{field.label}</span>
             </label>
           </fieldset>
+        )}
+
+        {field.type === 'file' && (
+          <div className="km-stack" style={{ gap: '0.75rem' }}>
+            {value ? (
+              <div
+                style={{
+                  padding: '1rem',
+                  backgroundColor: 'var(--km-mint-tint, #eefaf3)',
+                  border: '1.5px solid var(--km-success, #216e4e)',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--km-success-surface, #f0f9f4)',
+                      color: 'var(--km-success, #216e4e)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--km-forest, #123b35)' }}>
+                      {String(value)}
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--km-success, #216e4e)', fontWeight: 600 }}>
+                      {language === 'ml' ? 'രേഖ പരിശോധിച്ചു തയ്യാറാക്കി' : 'Document verified & ready for transfer'}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onChange('')}
+                  className="km-btn km-btn--secondary km-btn--sm"
+                  style={{ fontSize: '0.75rem' }}
+                >
+                  {language === 'ml' ? 'മാറ്റുക' : 'Change'}
+                </button>
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: '1.25rem',
+                  border: '2px dashed var(--km-border, #cbd5e1)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--km-warm-white, #f8fafc)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--km-forest, #123b35)' }}>
+                  <Upload size={18} />
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>
+                    {language === 'ml' ? 'രേഖ തിരഞ്ഞെടുക്കുക അല്ലെങ്കിൽ സാമ്പിൾ ചേർക്കുക' : 'Select a document file or attach sample'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input
+                    ref={inputRef}
+                    id={field.id}
+                    className="km-control"
+                    type="file"
+                    style={{ flex: 1, minWidth: '180px', padding: '0.45rem' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      onChange(file ? file.name : '');
+                    }}
+                    aria-labelledby={`label-${field.id}`}
+                    aria-describedby={describedBy}
+                    aria-required={field.required}
+                    aria-invalid={Boolean(error)}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange('income_certificate_2026.pdf');
+                      announce(language === 'ml' ? 'സാമ്പിൾ രേഖ ചേർത്തു' : 'Sample document attached');
+                    }}
+                    className="km-btn km-btn--primary km-btn--sm"
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    <FileText size={14} />
+                    <span>{language === 'ml' ? 'സാമ്പിൾ രേഖ ചേർക്കുക (PDF)' : 'Attach Sample PDF'}</span>
+                  </button>
+                </div>
+
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--km-text-muted, #64748b)' }}>
+                  {language === 'ml'
+                    ? 'ടെസ്റ്റിംഗിനായി നിങ്ങൾക്ക് ഫയൽ അപ്‌ലോഡ് ചെയ്യാം അല്ലെങ്കിൽ "സാമ്പിൾ രേഖ ചേർക്കുക" ക്ലിക്ക് ചെയ്ത് മുന്നോട്ട് പോകാം.'
+                    : 'For testing, you can choose any local PDF/JPG or click "Attach Sample PDF" to proceed instantly.'}
+                </p>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

@@ -3,12 +3,14 @@ import { BrandHeader } from '../components/BrandHeader';
 import { AccessibilityToolbar } from '../components/AccessibilityToolbar';
 import { GuidedWorkflow } from '../components/guided-workflow/GuidedWorkflow';
 import { FindingsList } from '../components/findings/FindingsList';
-import { FormInspectionReport, TransferResult } from '../types';
+import { FormInspectionReport, TransferResult, FieldDefinition, FieldOption } from '../types';
 import { useAccessibility } from '../modules/accessibility-controls/AccessibilityProvider';
 import { clearDraft } from '../modules/draft-storage';
-import { RefreshCw, ExternalLink, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, ExternalLink, ArrowRight, ShieldCheck, CheckCircle2, Shield } from 'lucide-react';
 import { SecurityGuardBanner } from '../components/security/SecurityGuardBanner';
 import { RescueLoopCard } from '../components/rescue-loop/RescueLoopCard';
+import { CivicWalletModal } from '../components/civic-wallet/CivicWalletModal';
+import { civicWallet } from '../modules/civic-wallet';
 
 type SidePanelView = 'guided' | 'rescue' | 'audit';
 
@@ -150,6 +152,37 @@ export const SidePanel: React.FC = () => {
     };
   };
 
+  const handleSyncSingleField = async (field: FieldDefinition, value: any): Promise<void> => {
+    if (activeTabId && typeof chrome !== 'undefined' && chrome.tabs) {
+      return new Promise((resolve) => {
+        chrome.tabs.sendMessage(
+          activeTabId,
+          { type: 'VAZHIKA_FILL_SINGLE_FIELD', fieldId: field.id, value },
+          () => resolve()
+        );
+      });
+    }
+  };
+
+  const handleRefreshFieldOptions = async (field: FieldDefinition): Promise<FieldOption[] | null> => {
+    if (activeTabId && typeof chrome !== 'undefined' && chrome.tabs) {
+      return new Promise((resolve) => {
+        chrome.tabs.sendMessage(
+          activeTabId,
+          { type: 'VAZHIKA_GET_FIELD_OPTIONS', fieldId: field.id },
+          (response) => {
+            if (response?.options && Array.isArray(response.options)) {
+              resolve(response.options);
+            } else {
+              resolve(null);
+            }
+          }
+        );
+      });
+    }
+    return null;
+  };
+
   const handleClearDraft = async () => {
     if (report) {
       await clearDraft(report.formId);
@@ -220,6 +253,16 @@ export const SidePanel: React.FC = () => {
             <button
               type="button"
               className="km-btn km-btn--quiet km-btn--sm"
+              onClick={() => civicWallet.openModal()}
+              title={language === 'ml' ? 'സിവിക് വാലറ്റ് (Civic Wallet)' : 'Civic Wallet'}
+            >
+              <Shield size={14} aria-hidden="true" />
+              <span>{language === 'ml' ? 'വാലറ്റ്' : 'Wallet'}</span>
+            </button>
+
+            <button
+              type="button"
+              className="km-btn km-btn--quiet km-btn--sm"
               onClick={scanActiveTab}
               title={language === 'ml' ? 'വീണ്ടും സ്കാൻ ചെയ്യുക' : 'Rescan this page'}
             >
@@ -253,10 +296,14 @@ export const SidePanel: React.FC = () => {
           <div className="km-state" style={{ margin: '2.5rem 1.5rem' }}>
             <h2 className="km-state__title">{language === 'ml' ? 'ഫോം കണ്ടെത്തിയില്ല' : 'No form to work on'}</h2>
             <p className="km-state__body">{loadError}</p>
-            <div className="km-state__actions">
+            <div className="km-state__actions" style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
               <button type="button" className="km-btn km-btn--primary" onClick={openTestForm}>
                 <ExternalLink size={16} aria-hidden="true" />
                 <span>{language === 'ml' ? 'പരീക്ഷണ ഫോം തുറക്കുക' : 'Open the public service test form'}</span>
+              </button>
+              <button type="button" className="km-btn km-btn--secondary" onClick={() => civicWallet.openModal()}>
+                <Shield size={16} aria-hidden="true" />
+                <span>{language === 'ml' ? 'സിവിക് വാലറ്റ്' : 'Civic Wallet'}</span>
               </button>
             </div>
           </div>
@@ -270,6 +317,8 @@ export const SidePanel: React.FC = () => {
             onHighlightField={handleHighlightField}
             onClearHighlight={handleClearHighlight}
             onTransferAnswers={handleTransferAnswers}
+            onSyncSingleField={handleSyncSingleField}
+            onRefreshFieldOptions={handleRefreshFieldOptions}
             onExit={scanActiveTab}
           />
         )}
@@ -351,6 +400,8 @@ export const SidePanel: React.FC = () => {
           </div>
         )}
       </main>
+
+      <CivicWalletModal />
     </div>
   );
 };

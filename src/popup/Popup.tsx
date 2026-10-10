@@ -6,6 +6,7 @@ import { FormInspectionReport } from '../types';
 import { useAccessibility } from '../modules/accessibility-controls/AccessibilityProvider';
 import { AlertTriangle, ScanLine, ArrowRight, RotateCcw } from 'lucide-react';
 import { SecurityGuardBanner } from '../components/security/SecurityGuardBanner';
+import { CivicWalletModal } from '../components/civic-wallet/CivicWalletModal';
 
 interface ScanError {
   title: string;
@@ -290,6 +291,8 @@ export const Popup: React.FC = () => {
         {/* Bottom-anchored secondary route */}
         <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>{testFormLink}</div>
       </div>
+
+      <CivicWalletModal />
     </div>
   );
 };

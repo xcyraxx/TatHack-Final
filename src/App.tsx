@@ -8,10 +8,11 @@ import { evaluateSecurity } from './modules/security-guard';
 import { detectFormValidationErrors } from './modules/rescue-loop';
 import { SecurityGuardBanner } from './components/security/SecurityGuardBanner';
 import { RescueLoopCard } from './components/rescue-loop/RescueLoopCard';
-import { fillFields, highlightField, clearHighlight } from './content';
-import { FormInspectionReport, TransferResult } from './types';
+import { fillFields, fillSingleField, getFieldOptions, highlightField, clearHighlight } from './content';
+import { FormInspectionReport, TransferResult, FieldDefinition, FieldOption } from './types';
 import { useAccessibility } from './modules/accessibility-controls/AccessibilityProvider';
 import { Search, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { CivicWalletModal } from './components/civic-wallet/CivicWalletModal';
 
 type AppTab = 'harness' | 'rescue' | 'audit';
 
@@ -50,6 +51,14 @@ export const App: React.FC = () => {
     return res;
   };
 
+  const handleSyncSingleField = async (field: FieldDefinition, value: any): Promise<void> => {
+    fillSingleField(field.id, value);
+  };
+
+  const handleRefreshFieldOptions = async (field: FieldDefinition): Promise<FieldOption[] | null> => {
+    return getFieldOptions(field.id);
+  };
+
   const runRescueDetection = () => {
     if (!report) return;
     const form = document.getElementById("embedded-demo-form") as HTMLFormElement;
@@ -72,7 +81,14 @@ export const App: React.FC = () => {
         }
       }
       const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries());
+      const data: Record<string, any> = {};
+      formData.forEach((val, key) => {
+        if (val instanceof File) {
+          data[key] = val.name ? { fileName: val.name, fileSize: `${(val.size / 1024).toFixed(1)} KB` } : '[File Attached]';
+        } else {
+          data[key] = val;
+        }
+      });
       setFormSubmittedData(data);
       announce('Original form submitted by user.');
     }
@@ -234,6 +250,47 @@ export const App: React.FC = () => {
                     />
                   </div>
 
+                  {/* Cascading Prerequisite: PIN code */}
+                  <div className="km-fixture-field">
+                    <label htmlFor="pincode" className="km-fixture-label">
+                      Postal PIN Code <span style={{ color: 'var(--km-error)' }}>*</span>
+                    </label>
+                    <input
+                      id="pincode"
+                      name="pincode"
+                      type="text"
+                      maxLength={6}
+                      placeholder="6-digit PIN code (e.g. 682001 or 695001)"
+                      className="km-fixture-control"
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        const sel = document.getElementById('district') as HTMLSelectElement | null;
+                        if (sel && val.length >= 6) {
+                          sel.disabled = false;
+                          sel.innerHTML = `
+                            <option value="">Select District</option>
+                            <option value="ernakulam">Ernakulam</option>
+                            <option value="thiruvananthapuram">Thiruvananthapuram</option>
+                            <option value="kozhikode">Kozhikode</option>
+                            <option value="thrissur">Thrissur</option>
+                          `;
+                          if (val.startsWith('682')) sel.value = 'ernakulam';
+                          else if (val.startsWith('695')) sel.value = 'thiruvananthapuram';
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* Cascading Dependent Dropdown: District */}
+                  <div className="km-fixture-field">
+                    <label htmlFor="district" className="km-fixture-label">
+                      Applicant District <span style={{ color: 'var(--km-error)' }}>*</span>
+                    </label>
+                    <select id="district" name="district" disabled className="km-fixture-control">
+                      <option value="">-- Enter PIN Code first --</option>
+                    </select>
+                  </div>
+
                   {/* 6. Radio group without fieldset / legend */}
                   <div className="km-fixture-field">
                     <span className="km-fixture-defect">[Defect: Radio group without &lt;fieldset&gt; / &lt;legend&gt;]</span>
@@ -252,6 +309,14 @@ export const App: React.FC = () => {
                         <span>Person with Disability (Divyangjan)</span>
                       </label>
                     </div>
+                  </div>
+
+                  {/* File Upload Control */}
+                  <div className="km-fixture-field">
+                    <label htmlFor="income_cert" className="km-fixture-label">
+                      Upload Revenue Income Certificate (PDF/JPG) <span style={{ color: 'var(--km-error)' }}>*</span>
+                    </label>
+                    <input id="income_cert" name="income_cert" type="file" accept=".pdf,.jpg,.jpeg" className="km-fixture-control" />
                   </div>
 
                   {/* 7. Terms & conditions */}
@@ -326,6 +391,8 @@ export const App: React.FC = () => {
                   onHighlightField={(selector, fieldId) => highlightField(selector, fieldId)}
                   onClearHighlight={() => clearHighlight()}
                   onTransferAnswers={handleTransferToEmbeddedForm}
+                  onSyncSingleField={handleSyncSingleField}
+                  onRefreshFieldOptions={handleRefreshFieldOptions}
                   onExit={() => setReport(null)}
                 />
               )}
@@ -402,6 +469,8 @@ export const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      <CivicWalletModal />
     </div>
   );
 };

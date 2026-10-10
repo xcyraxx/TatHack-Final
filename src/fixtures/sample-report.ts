@@ -180,6 +180,23 @@ export const sampleInaccessibleReport: FormInspectionReport = {
       isSafeToRepair: true,
     },
     {
+      id: 'field-income_cert',
+      originalId: 'income_cert',
+      name: 'income_cert',
+      selector: '#income_cert',
+      originalType: 'file',
+      type: 'file',
+      label: 'Revenue Income Certificate',
+      questionText: 'Upload your Revenue Income Certificate',
+      explanation: {
+        en: 'Attach your valid revenue certificate in PDF or JPG format under 2MB.',
+        ml: 'നിങ്ങളുടെ സാധുവായ വരുമാന സർട്ടിഫിക്കറ്റ് PDF അല്ലെങ്കിൽ JPG ഫോർമാറ്റിൽ ചേർക്കുക.',
+      },
+      required: true,
+      validation: { required: true },
+      isSafeToRepair: true,
+    },
+    {
       id: 'field-terms',
       originalId: 'terms',
       name: 'terms',
